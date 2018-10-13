@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"strconv"
 	"strings"
@@ -18,27 +19,28 @@ var simple bool
 var quit chan bool
 
 func main() {
-	var tmp string
 	flag.IntVar(&uiPort, "UIPort", 8080, "Port for the UI client")
 	flag.StringVar(&name, "name", "Peer", "name of the gossiper")
 	flag.BoolVar(&simple, "simple", false, "run gossiper in simple broadcast mode")
-	flag.StringVar(&tmp, "gossipAddr", "127.0.0.1:5000", "ip:port for the gossiper")
+	tmp := flag.String("gossipAddr", "127.0.0.1:5000", "ip:port for the gossiper")
 	peerList := flag.String("peers", "", "comma seperated list of peers of the form ip:port")
 	flag.Parse()
 
-	validateAddress(tmp)
+	validateAddress(*tmp)
+	elems := strings.Split(*tmp, ":")
+	gossipIp = elems[0]
+	gossipPort, _ = strconv.Atoi(elems[1])
 	peers = validatePeerList(*peerList)
 
-	log.Println("UIPort has value", uiPort)
-	log.Println("gossipAddr has value", tmp)
-	log.Println("name has value", name)
-	log.Println("peers has value", peers)
-	log.Println("simple has value", simple)
+	fmt.Println("UIPort has value", uiPort)
+	fmt.Println("gossipAddr has value", *tmp)
+	fmt.Println("name has value", name)
+	fmt.Println("peers has value", peers)
+	fmt.Println("simple has value", simple)
 
 	g := gossiper.NewGossiper(gossipIp, name, gossipPort, uiPort, peers)
-	log.Println("Listenting for client messages")
+
 	go g.ListenClientMessages(quit)
-	log.Println("Listening for peer messages")
 	go g.ListenPeerMessages(quit)
 	<-quit
 
@@ -49,9 +51,7 @@ func validateAddress(address string) {
 	tmp := strings.Split(address, ":")
 
 	if len(tmp) == 2 {
-		gossipIp = tmp[0]
-		if port, errPort := strconv.Atoi(tmp[1]); errPort == nil {
-			gossipPort = port
+		if _, errPort := strconv.Atoi(tmp[1]); errPort == nil {
 			return
 		} else {
 			err = errPort

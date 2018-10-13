@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strings"
 
 	"github.com/carbeer/Peerster/utils"
 	"github.com/dedis/protobuf"
@@ -39,6 +40,8 @@ func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []stri
 
 func (g *Gossiper) ListenClientMessages(quit chan bool) {
 	log.Println("Entering ListenClientMessages")
+	fmt.Println("address of g", g.address.String())
+	fmt.Println("peers has value", g.peers)
 	// Listen infinitely long
 	for {
 		buffer := make([]byte, 4096)
@@ -54,15 +57,17 @@ func (g *Gossiper) ListenClientMessages(quit chan bool) {
 			log.Fatal(e)
 		}
 		fmt.Println("CLIENT MESSAGE", msg.Text)
-		fmt.Printf("PEERS %v", g.peers)
+		fmt.Printf("PEERS %v\n", g.peers)
 
-		g.clientMessageHandler(msg.Text)
+		go g.clientMessageHandler(msg.Text)
 		// broadcast message to all peers
 	}
 	quit <- true
 }
 
 func (g *Gossiper) ListenPeerMessages(quit chan bool) {
+	fmt.Println("address of g", g.address.String())
+	fmt.Println("peers has value", g.peers)
 	log.Println("Entering ListenPeerMessages")
 	for {
 		buffer := make([]byte, 4096)
@@ -79,16 +84,16 @@ func (g *Gossiper) ListenPeerMessages(quit chan bool) {
 		if e != nil {
 			log.Fatal(e)
 		}
-		log.Println(fmt.Sprintf("SIMPLE MESSAGE origin %s from %s contents %s", msg.OriginalName, msg.RelayPeerAddr, msg.Contents))
-		fmt.Printf("PEERS %v", g.peers)
-		// broadcast message to other peers
+		fmt.Printf("SIMPLE MESSAGE origin %s from %s contents %s\n", msg.OriginalName, msg.RelayPeerAddr, msg.Contents)
+		fmt.Printf("PEERS %v\n", fmt.Sprint(strings.Join(g.peers, ",")))
+		go g.peerMessageHandler(*msg)
 	}
 	quit <- true
 }
 
 func (g *Gossiper) clientMessageHandler(msg string) {
 	log.Println("Entering clientMessageHandler")
-	peerMessage := utils.SimpleMessage{OriginalName: g.name, RelayPeerAddr: g.address.IP.String(), Contents: msg}
+	peerMessage := utils.SimpleMessage{OriginalName: g.name, RelayPeerAddr: g.address.String(), Contents: msg}
 	packetBytes, e := protobuf.Encode(&peerMessage)
 	if e != nil {
 		log.Fatal(e)
@@ -98,13 +103,40 @@ func (g *Gossiper) clientMessageHandler(msg string) {
 	}
 }
 
+func (g *Gossiper) addPeerToListIfApplicable(address string) {
+	for i := range g.peers {
+		if g.peers[i] == address {
+			return
+		}
+	}
+	g.peers = append(g.peers, address)
+}
+
+func (g *Gossiper) peerMessageHandler(msg utils.SimpleMessage) {
+	log.Println("Origin peer")
+	originPeer := msg.RelayPeerAddr
+	log.Println(originPeer)
+
+	g.addPeerToListIfApplicable(originPeer)
+	msg.RelayPeerAddr = g.address.String()
+	packetBytes, e := protobuf.Encode(&msg)
+	if e != nil {
+		log.Fatal(e)
+	}
+	// Broadcast to everyone except originPeer
+	for _, p := range g.peers {
+		if p != originPeer {
+			g.sendToPeer(packetBytes, p)
+		}
+	}
+}
+
 func (g *Gossiper) sendToPeer(byteStream []byte, targetIpPort string) {
+	fmt.Printf("Origin peer %s is sending to %s\n", g.address.String(), targetIpPort)
 	peerConn, e := net.Dial("udp4", targetIpPort)
 	if e != nil {
 		log.Fatal(e)
 	}
-	log.Println("Sending message from peer to peer")
-	log.Println(targetIpPort)
 
 	_, e = peerConn.Write(byteStream)
 	if e != nil {
