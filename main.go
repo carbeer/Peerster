@@ -3,7 +3,7 @@ package main
 import (
 	"errors"
 	"flag"
-	"fmt"
+	"log"
 	"strconv"
 	"strings"
 
@@ -15,6 +15,7 @@ var gossipIp, name string
 var gossipPort int
 var peers []string
 var simple bool
+var quit chan bool
 
 func main() {
 	var tmp string
@@ -28,15 +29,19 @@ func main() {
 	validateAddress(tmp)
 	peers = validatePeerList(*peerList)
 
-	fmt.Println("UIPort has value", uiPort)
-	fmt.Println("gossipAddr has value", tmp)
-	fmt.Println("name has value", name)
-	fmt.Println("peers has value", peers)
-	fmt.Println("simple has value", simple)
+	log.Println("UIPort has value", uiPort)
+	log.Println("gossipAddr has value", tmp)
+	log.Println("name has value", name)
+	log.Println("peers has value", peers)
+	log.Println("simple has value", simple)
 
 	g := gossiper.NewGossiper(gossipIp, name, gossipPort, uiPort, peers)
-	g.ListenClientMessages()
-	g.ListenPeerMessages()
+	log.Println("Listenting for client messages")
+	go g.ListenClientMessages(quit)
+	log.Println("Listening for peer messages")
+	go g.ListenPeerMessages(quit)
+	<-quit
+
 }
 
 func validateAddress(address string) {
@@ -54,7 +59,7 @@ func validateAddress(address string) {
 	} else {
 		err = errors.New("A valid address must have the format ip:port")
 	}
-	fmt.Println("An error occured: " + err.Error())
+	log.Println("An error occured: " + err.Error())
 }
 
 func validatePeerList(list string) []string {
