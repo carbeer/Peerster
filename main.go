@@ -38,7 +38,7 @@ func main() {
 	fmt.Println("peers has value", peers)
 	fmt.Println("simple has value", simple)
 
-	g := gossiper.NewGossiper(gossipIp, name, gossipPort, uiPort, peers)
+	g := gossiper.NewGossiper(gossipIp, name, gossipPort, uiPort, peers, simple)
 
 	go g.ListenClientMessages(quit)
 	go g.ListenPeerMessages(quit)
