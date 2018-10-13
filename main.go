@@ -6,29 +6,37 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/carbeer/Peerster/gossiper"
 )
 
 var uiPort int
-var gossipAddr, name string
+var gossipIp, name string
+var gossipPort int
 var peers []string
 var simple bool
 
 func main() {
+	var tmp string
 	flag.IntVar(&uiPort, "UIPort", 8080, "Port for the UI client")
 	flag.StringVar(&name, "name", "Peer", "name of the gossiper")
 	flag.BoolVar(&simple, "simple", false, "run gossiper in simple broadcast mode")
-	flag.StringVar(&gossipAddr, "gossipAddr", "127.0.0.1:5000", "ip:port for the gossiper")
+	flag.StringVar(&tmp, "gossipAddr", "127.0.0.1:5000", "ip:port for the gossiper")
 	peerList := flag.String("peers", "", "comma seperated list of peers of the form ip:port")
 	flag.Parse()
 
-	validateAddress(gossipAddr)
+	validateAddress(tmp)
 	peers = validatePeerList(*peerList)
 
-	fmt.Println("UIPort has value ", uiPort)
-	fmt.Println("gossipAddr has value ", gossipAddr)
-	fmt.Println("name has value ", name)
-	fmt.Println("peers has value ", peers)
-	fmt.Println("simple has value ", simple)
+	fmt.Println("UIPort has value", uiPort)
+	fmt.Println("gossipAddr has value", tmp)
+	fmt.Println("name has value", name)
+	fmt.Println("peers has value", peers)
+	fmt.Println("simple has value", simple)
+
+	g := gossiper.NewGossiper(gossipIp, name, gossipPort, uiPort, peers)
+	g.ListenClientMessages()
+	g.ListenPeerMessages()
 }
 
 func validateAddress(address string) {
@@ -36,14 +44,12 @@ func validateAddress(address string) {
 	tmp := strings.Split(address, ":")
 
 	if len(tmp) == 2 {
-		if _, errIp := strconv.Atoi(tmp[0]); errIp == nil {
-			if _, errPort := strconv.Atoi(tmp[1]); errPort == nil {
-				return
-			} else {
-				err = errPort
-			}
+		gossipIp = tmp[0]
+		if port, errPort := strconv.Atoi(tmp[1]); errPort == nil {
+			gossipPort = port
+			return
 		} else {
-			err = errIp
+			err = errPort
 		}
 	} else {
 		err = errors.New("A valid address must have the format ip:port")
@@ -57,15 +63,4 @@ func validatePeerList(list string) []string {
 		validateAddress(a)
 	}
 	return addresses
-}
-
-func receivedClientMessage(msg SimpleMessage) {
-	// Broadcast to all clients
-	fmt.Printf("SIMPLE MESSAGE origin %v from %v contents %v", msg.OriginalName, msg.RelayPeerAddr, msg.Contents)
-}
-
-func receivedPeerMessage(msg SimpleMessage) {
-	// Implement
-	fmt.Printf("SIMPLE MESSAGE origin %v from %v contents %v", msg.OriginalName, msg.RelayPeerAddr, msg.Contents)
-
 }
