@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/carbeer/Peerster/utils"
 	"github.com/dedis/protobuf"
@@ -24,10 +25,10 @@ type Gossiper struct {
 	name string
 	// Addresses of all peers
 	peers []string
-	// List of queued messages
-	messageQueue map[string]utils.RumorMessages
+	// Sprted list of received messages
+	ReceivedMessages map[string]utils.RumorMessages
 	// Keeps track of wanted messages
-	wantedMessages map[string]string
+	WantedMessages map[string]string
 	simple         bool
 	idCounter      int
 }
@@ -37,19 +38,19 @@ func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []stri
 	udpConn, _ := net.ListenUDP("udp4", udpAddr)
 	clientAddr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", gossipIp, clientPort))
 	clientConn, _ := net.ListenUDP("udp4", clientAddr)
-	messageQueue := make(map[string]utils.RumorMessages)
-	wantedMessages := make(map[string]string)
-	idCounter := int(0)
+	ReceivedMessages := make(map[string]utils.RumorMessages)
+	WantedMessages := make(map[string]string)
+	idCounter := int(1)
 	return &Gossiper{
-		address:        *udpAddr,
-		udpConn:        *udpConn,
-		clientConn:     *clientConn,
-		name:           name,
-		peers:          peers,
-		messageQueue:   messageQueue,
-		wantedMessages: wantedMessages,
-		simple:         simple,
-		idCounter:      idCounter,
+		address:          *udpAddr,
+		udpConn:          *udpConn,
+		clientConn:       *clientConn,
+		name:             name,
+		peers:            peers,
+		ReceivedMessages: ReceivedMessages,
+		WantedMessages:   WantedMessages,
+		simple:           simple,
+		idCounter:        idCounter,
 	}
 }
 
@@ -71,7 +72,7 @@ func (g *Gossiper) ListenClientMessages(quit chan bool) {
 			log.Fatal(e)
 		}
 		fmt.Println("CLIENT MESSAGE", msg.Text)
-		fmt.Printf("PEERS %v\n", g.peers)
+		fmt.Printf("PEERS %v\n", fmt.Sprint(strings.Join(g.peers, ",")))
 
 		go g.clientMessageHandler(msg.Text)
 		// broadcast message to all peers
@@ -108,7 +109,6 @@ func (g *Gossiper) addPeerToListIfApplicable(adr string) {
 			return
 		}
 	}
-	fmt.Println("Adding to list of known peers", adr)
 	g.peers = append(g.peers, adr)
 }
 
@@ -118,8 +118,9 @@ func (g *Gossiper) clientMessageHandler(msg string) {
 		simpleMessage := utils.SimpleMessage{OriginalName: g.name, RelayPeerAddr: g.address.String(), Contents: msg}
 		gossipPacket = utils.GossipPacket{Simple: &simpleMessage}
 	} else {
-		rumorMessage := utils.RumorMessage{Origin: g.name, ID: string(g.idCounter), Text: msg}
+		rumorMessage := utils.RumorMessage{Origin: g.name, ID: strconv.Itoa(g.idCounter), Text: msg}
 		g.idCounter = g.idCounter + 1
+		g.addToKnownMessages(rumorMessage)
 		gossipPacket = utils.GossipPacket{Rumor: &rumorMessage}
 	}
 	for _, p := range g.peers {
@@ -135,7 +136,7 @@ func (g *Gossiper) peerMessageHandler(msg utils.GossipPacket, sender string) {
 	} else if msg.Rumor != nil {
 		g.rumorMongering(*msg.Rumor, sender)
 	} else if msg.Status != nil {
-		g.statusProcessing(*msg.Status, sender)
+		g.StatusProcessing(*msg.Status, sender)
 	}
 }
 
@@ -159,24 +160,63 @@ func (g *Gossiper) simpleBroadcast(msg utils.SimpleMessage) {
 }
 
 func (g *Gossiper) rumorMongering(msg utils.RumorMessage, sender string) {
-	fmt.Printf("RUMOR MESSAGE origin %s with ID %s contents %s\n", msg.Origin, msg.ID, msg.Text)
+	fmt.Printf("RUMOR origin %s from %s ID %s contents %s\n", msg.Origin, sender, msg.ID, msg.Text)
 	fmt.Printf("PEERS %v\n", fmt.Sprint(strings.Join(g.peers, ",")))
 	origin := msg.Origin
-	// Check whether the message is new
-	if g.wantedMessages[origin] <= msg.ID {
-		g.newRumor(msg)
+
+	if origin == g.name {
+		return
+	}
+	// Check whether the message is desired
+	if g.WantedMessages[origin] == msg.ID || (g.WantedMessages[origin] == "" && msg.ID == "1") {
+		gossipPacket := utils.GossipPacket{Rumor: &msg}
+		g.addToKnownMessages(msg)
+		// TODO: Make this an independent Thread!
+		randPeer := g.spreadRumorToRandomPeer(sender)
+		g.sendToPeer(gossipPacket, randPeer)
 	}
 	g.sendAcknowledgement(sender)
 }
 
-func (g *Gossiper) statusProcessing(msg utils.StatusPacket, sender string) {
-	fmt.Printf("STATUS MESSAGE want %s\n", msg.ToString())
+func (g *Gossiper) spreadRumorToRandomPeer(origin string) string {
+	for {
+		newRand := rand.New(rand.NewSource(time.Now().UnixNano())).Intn(len(g.peers))
+		if g.peers[newRand] != origin {
+			return g.peers[newRand]
+		}
+	}
+}
+
+func (g *Gossiper) addToKnownMessages(msg utils.RumorMessage) {
+	id, e := strconv.Atoi(msg.ID)
+	if e != nil {
+		log.Fatal(e)
+	}
+	g.WantedMessages[msg.Origin] = strconv.Itoa(id + 1)
+	g.ReceivedMessages[msg.Origin] = append(g.ReceivedMessages[msg.Origin], msg)
+}
+
+func (g *Gossiper) StatusProcessing(msg utils.StatusPacket, sender string) {
+	fmt.Printf("STATUS from %s%s\n", sender, msg.ToString())
 	fmt.Printf("PEERS %v\n", fmt.Sprint(strings.Join(g.peers, ",")))
+	if g.HasLessMessagesThan(msg) {
+		log.Println("Request more messages from", g.name, sender)
+		g.sendAcknowledgement(sender)
+	} else if msgAv, msgs := g.AdditionalMessages(msg); msgAv {
+		log.Println("Sending messages to", g.name, sender)
+		sort.Sort(msgs)
+		for _, rm := range msgs {
+			gossipPacket := utils.GossipPacket{Rumor: &rm}
+			g.sendToPeer(gossipPacket, sender)
+		}
+	} else {
+		fmt.Printf("IN SYNC WITH %s\n", sender)
+	}
 }
 
 func (g *Gossiper) generateStatusPacket() utils.StatusPacket {
 	packet := utils.StatusPacket{}
-	for k, v := range g.wantedMessages {
+	for k, v := range g.WantedMessages {
 		id, e := strconv.Atoi(v)
 		if e != nil {
 			log.Fatal(e)
@@ -193,39 +233,10 @@ func (g *Gossiper) sendAcknowledgement(adr string) {
 	g.sendToPeer(gossipPacket, adr)
 }
 
-func (g *Gossiper) newRumor(msg utils.RumorMessage) {
-	origin := msg.Origin
-	// msg is the next wanted message
-	if g.wantedMessages[origin] == msg.ID {
-		id, e := strconv.Atoi(msg.ID)
-		if e != nil {
-			log.Fatal(e)
-		}
-		var ix int = 1
-		// More messages of this origin in queue
-		if len(g.messageQueue[origin]) > 0 {
-			sort.Sort(g.messageQueue[msg.Origin])
-
-			log.Println("MQ ID", g.messageQueue[origin][ix-1].ID)
-			log.Println("MSG ID", id+ix)
-			// Find highest number ix of consecutive messages to update the next wanted message
-			for g.messageQueue[origin][ix-1].ID == string(id+ix) {
-				ix = ix + 1
-			}
-			// Cut off the updated values
-			g.messageQueue[origin] = g.messageQueue[origin][ix-1:]
-		}
-		// Update the wanted message
-		g.wantedMessages[origin] = string(id + ix)
-	} else {
-		// msg has to be queued because it's larger then the next wanted message
-		g.messageQueue[origin] = append(g.messageQueue[origin], msg)
-	}
-	gossipPacket := utils.GossipPacket{Rumor: &msg}
-	g.sendToPeer(gossipPacket, g.peers[rand.Intn(len(g.peers))])
-}
-
 func (g *Gossiper) sendToPeer(gossipPacket utils.GossipPacket, targetIpPort string) {
+	if gossipPacket.Rumor != nil {
+		fmt.Printf("MONGERING with %s\n", targetIpPort)
+	}
 	byteStream, e := protobuf.Encode(&gossipPacket)
 	if e != nil {
 		log.Fatal(e)
@@ -234,9 +245,68 @@ func (g *Gossiper) sendToPeer(gossipPacket utils.GossipPacket, targetIpPort stri
 	if e != nil {
 		log.Fatal(e)
 	}
-
 	_, e = g.udpConn.WriteToUDP(byteStream, adr)
 	if e != nil {
 		log.Fatal(e)
 	}
+}
+
+func (g *Gossiper) HasLessMessagesThan(status utils.StatusPacket) bool {
+	for i := range status.Want {
+		id := status.Want[i].Identifier
+		// Check if Origin and IDs all known
+		if g.WantedMessages[id] == "" || g.WantedMessages[id] < strconv.Itoa(int(status.Want[i].NextID)) {
+			return true
+		}
+	}
+	return false
+}
+
+func (g *Gossiper) AdditionalMessages(status utils.StatusPacket) (bool, utils.RumorMessages) {
+	messages := []utils.RumorMessage{}
+	missingIds := []string{}
+	msgAv := false
+
+	// Check whether all identifiers exist
+	for id, _ := range g.WantedMessages {
+		hasId := false
+		for i := range status.Want {
+			log.Println("Checking whether this equals", status.Want[i].Identifier, id)
+			if status.Want[i].Identifier == id {
+				log.Println("Found the id in database. Not new for other peer.")
+				hasId = true
+				break
+			}
+		}
+		if !hasId {
+			log.Println("Add the id to the missingIds")
+			missingIds = append(missingIds, id)
+			log.Println("Missing ids now", missingIds)
+			msgAv = true
+		}
+	}
+	// Add all messages for missing identifiers
+	for _, id := range missingIds {
+		log.Println("Adding all messages for missing identifiers")
+		log.Println(id)
+		for ix, _ := range g.ReceivedMessages[id] {
+			log.Println(g.ReceivedMessages[id][ix])
+			messages = append(messages, g.ReceivedMessages[id][ix])
+			msgAv = true
+		}
+	}
+	log.Println("New messages for peer found:", messages)
+
+	// Add missing single messages
+	for i, ps := range status.Want {
+		log.Println("Check for new messages for identifier", ps.Identifier)
+		j, _ := strconv.Atoi(g.WantedMessages[ps.Identifier])
+		log.Println("Our peer has messages until", j-1)
+		for j > int(status.Want[i].NextID) {
+			messages = append(messages, g.ReceivedMessages[ps.Identifier][int(j-1)])
+			msgAv = true
+			j--
+		}
+	}
+	return msgAv, messages
 }

@@ -22,6 +22,7 @@ type Message struct {
 }
 
 type PeerStatus struct {
+	// Equals the Origin in RumorMessage
 	Identifier string
 	NextID     uint32
 }
@@ -33,7 +34,7 @@ type StatusPacket struct {
 func (sp *StatusPacket) ToString() string {
 	s := ""
 	for status := range sp.Want {
-		s = s + fmt.Sprintf("(%s: %v) ", sp.Want[status].Identifier, sp.Want[status].NextID)
+		s = fmt.Sprintf("%s peer %s nextID %v", s, sp.Want[status].Identifier, sp.Want[status].NextID)
 	}
 	return s
 }
@@ -63,4 +64,11 @@ func (rm RumorMessages) Swap(i, j int) {
 
 func (rm RumorMessage) GetIdentifier() string {
 	return fmt.Sprintf("%v%v", rm.Origin, rm.ID)
+}
+
+func (rm1 RumorMessage) CompareRumorMessage(rm2 RumorMessage) bool {
+	if rm1.Origin != rm2.Origin || rm1.ID != rm2.ID || rm1.Text != rm2.Text {
+		return false
+	}
+	return true
 }
