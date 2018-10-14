@@ -17,7 +17,7 @@ import (
 
 type Gossiper struct {
 	// Address ip:port on which the Gossiper instance runs
-	address net.UDPAddr
+	Address net.UDPAddr
 	// UDP connection for peers
 	udpConn net.UDPConn
 	// Client connecteion (UI)
@@ -46,7 +46,7 @@ func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []stri
 	idCounter := int(1)
 	rumorMongeringChannel := make(map[string]chan utils.StatusPacket, 2048)
 	return &Gossiper{
-		address:               *udpAddr,
+		Address:               *udpAddr,
 		udpConn:               *udpConn,
 		clientConn:            *clientConn,
 		name:                  name,
@@ -61,10 +61,9 @@ func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []stri
 
 func (g *Gossiper) AntiEntropy() {
 	var peer string
-	timeout := make(chan bool)
-	startTimeoutCounter(timeout)
-
 	for {
+		timeout := make(chan bool)
+		go startTimeoutCounter(timeout)
 		<-timeout
 		peer = g.pickRandomPeerForMongering("")
 		go g.sendAcknowledgement(peer)
@@ -128,7 +127,7 @@ func (g *Gossiper) clientMessageHandler(msg string) {
 	var wg sync.WaitGroup
 	var gossipPacket utils.GossipPacket
 	if g.simple {
-		simpleMessage := utils.SimpleMessage{OriginalName: g.name, RelayPeerAddr: g.address.String(), Contents: msg}
+		simpleMessage := utils.SimpleMessage{OriginalName: g.name, RelayPeerAddr: g.Address.String(), Contents: msg}
 		gossipPacket = utils.GossipPacket{Simple: &simpleMessage}
 		for _, p := range g.peers {
 			wg.Add(1)
@@ -173,7 +172,7 @@ func (g *Gossiper) simpleMessage(msg utils.SimpleMessage) {
 		return
 	}
 
-	msg.RelayPeerAddr = g.address.String()
+	msg.RelayPeerAddr = g.Address.String()
 	gossipPacket := utils.GossipPacket{Simple: &msg}
 	// Broadcast to everyone except originPeer
 	for _, p := range g.peers {
@@ -293,6 +292,7 @@ func (g *Gossiper) pickRandomPeerForMongering(origin string) string {
 func startTimeoutCounter(channel chan<- bool) {
 	duration, _ := time.ParseDuration("1s")
 	time.NewTicker(duration)
+	fmt.Println("Anti-Entropy")
 	channel <- true
 	close(channel)
 }
