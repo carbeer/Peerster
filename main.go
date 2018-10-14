@@ -42,7 +42,9 @@ func main() {
 
 	go g.ListenClientMessages(quit)
 	go g.ListenPeerMessages(quit)
-	go g.AntiEntropy()
+	if !simple {
+		go g.AntiEntropy()
+	}
 	<-quit
 
 }

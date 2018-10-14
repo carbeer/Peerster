@@ -131,7 +131,8 @@ func (g *Gossiper) clientMessageHandler(msg string) {
 		gossipPacket = utils.GossipPacket{Simple: &simpleMessage}
 		for _, p := range g.peers {
 			wg.Add(1)
-			func(p string) {
+			go func(p string) {
+				fmt.Println("Sending to", p)
 				g.sendToPeer(gossipPacket, p)
 				wg.Done()
 			}(p)
@@ -178,10 +179,10 @@ func (g *Gossiper) simpleMessage(msg utils.SimpleMessage) {
 	for _, p := range g.peers {
 		if p != receivedFrom {
 			wg.Add(1)
-			go func() {
+			go func(p string) {
 				g.sendToPeer(gossipPacket, p)
 				wg.Done()
-			}()
+			}(p)
 		}
 	}
 	wg.Wait()
