@@ -13,7 +13,6 @@ import (
 var uiPort int
 var msg string
 var dest string
-var ip string = "127.0.0.1"
 
 func main() {
 	flag.IntVar(&uiPort, "UIPort", 8080, "port for the UI client")
@@ -41,7 +40,7 @@ func SendMessage(msg string, uiPort int) {
 	utils.HandleError(e)
 
 	log.Println("Creating a client connection")
-	udpConn, e := net.Dial("udp4", fmt.Sprintf("%s:%d", ip, uiPort))
+	udpConn, e := net.Dial("udp4", fmt.Sprintf("%s:%d", utils.GetClientIp(), uiPort))
 	utils.HandleError(e)
 
 	log.Println("Writing the message")
@@ -57,7 +56,7 @@ func SendPrivateMessage(msg string, uiPort int, dest string) {
 	utils.HandleError(e)
 
 	log.Println("Creating a client connection")
-	udpConn, e := net.Dial("udp4", fmt.Sprintf("%s:%d", ip, uiPort))
+	udpConn, e := net.Dial("udp4", fmt.Sprintf("%s:%d", utils.GetClientIp(), uiPort))
 	utils.HandleError(e)
 
 	log.Println("Writing the message")

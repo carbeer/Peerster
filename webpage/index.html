@@ -6,26 +6,29 @@
 </title>
 
 <body>
-  <p>Your node:<a id="id" value="" \ ></p>
-  <p>
-    Peers:
-  </p>
+  <p>Your node:<label id="id" value="" \></p>
+  
+    <p>Peers:</p>
   <textarea id="peers" rows="4" cols="50" value=""></textarea>
+  <p> Add a peer</o>
   <p>
-    <input id="peer" type="text" value="Type the peer here...">
+    <input id="peer" type="text" value="ip:port">
   </p>
   <button id="addNewPeer">Add Peer</button>
-  <p>
-      Known origin nodes
-    </p>
+  
+  <p>Known origin nodes:</p>
   <textarea id="origins" rows="4" cols="50" value=""></textarea>
-  <p>
-    Messages:
-  </p>
-  <p>
-    <input id="message" type="text" value="Type your message here...">
-  </p>
+  
+  <p>Messages:</p>
+  <input id="message" type="text" value="Your message...">
   <button id="sendMessage">Send Message</button>
+  
+  <p>Upload a file:</p>
+  <form id="fileForm" enctype="multipart/form-data" method="post" name="fileinfo">
+    <input type="file" name="Share file..." required />
+  </form> 
+  <input id="uploadButton" type="button" value="Save">
+
   <p>
     Chatbox
   </p>

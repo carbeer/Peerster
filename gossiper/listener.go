@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/carbeer/Peerster/utils"
 	"github.com/dedis/protobuf"
@@ -12,11 +13,11 @@ import (
 func (g *Gossiper) ListenClientMessages(quit chan bool) {
 	// Listen infinitely long
 	for {
+		// TODO: Increase buffer
 		buffer := make([]byte, 4096)
 		n, _, e := g.ClientConn.ReadFromUDP(buffer)
 		utils.HandleError(e)
 		msg := &utils.Message{}
-		// TODO: Larger Messages!
 		e = protobuf.Decode(buffer[:n], msg)
 		utils.HandleError(e)
 		fmt.Println("CLIENT MESSAGE", msg.Text)
@@ -55,6 +56,7 @@ func (g *Gossiper) ClientMessageHandler(msg utils.Message) {
 		for _, p := range g.peers {
 			wg.Add(1)
 			go func(p string) {
+				fmt.Printf("%d: Simple Message\n", time.Now().Second())
 				g.sendToPeer(gossipPacket, p)
 				wg.Done()
 			}(p)

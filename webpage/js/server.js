@@ -1,6 +1,7 @@
 $(document).ready(function () {
   getMessages();
   getPeers();
+  getKnownOrigins();
   fetchId();
 
   $("#sendMessage").on("click", function () {
@@ -9,6 +10,10 @@ $(document).ready(function () {
 
   $("#addNewPeer").on("click", function () {
     addPeer();
+  });
+
+  $('#uploadButton').on('click', function(){ 
+    saveFile();
   });
 });
 
@@ -81,5 +86,14 @@ function getKnownOrigins() {
       origins = JSON.parse(origins)
       $("#origins").val(id);
     },
+  });
+}
+
+function saveFile() {
+  var fileName = $('#fileForm').val().split('\\').pop();
+  $.ajax({
+      url: '/file',  
+      type: 'POST',
+      data: { filename: fileName }
   });
 }

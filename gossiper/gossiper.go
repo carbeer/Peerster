@@ -2,10 +2,8 @@ package gossiper
 
 import (
 	"fmt"
-	"log"
 	"math/rand"
 	"net"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -48,7 +46,7 @@ type Gossiper struct {
 func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []string, simple bool) *Gossiper {
 	udpAddr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", gossipIp, gossipPort))
 	udpConn, _ := net.ListenUDP("udp4", udpAddr)
-	clientAddr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", gossipIp, clientPort))
+	clientAddr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", utils.GetClientIp(), clientPort))
 	clientConn, _ := net.ListenUDP("udp4", clientAddr)
 	return &Gossiper{
 		Address:                   *udpAddr,
@@ -95,8 +93,10 @@ func (g *Gossiper) simpleMessageHandler(msg utils.SimpleMessage) {
 }
 
 func (g *Gossiper) rumorMessageHandler(msg utils.RumorMessage, sender string) {
-	fmt.Printf("RUMOR origin %s from %s ID %d contents %s\n", msg.Origin, sender, msg.ID, msg.Text)
-	fmt.Printf("PEERS %v\n", fmt.Sprint(strings.Join(g.peers, ",")))
+	if msg.Text != "" {
+		fmt.Printf("RUMOR origin %s from %s ID %d contents %s\n", msg.Origin, sender, msg.ID, msg.Text)
+		fmt.Printf("PEERS %v\n", fmt.Sprint(strings.Join(g.peers, ",")))
+	}
 	origin := msg.Origin
 	var wg sync.WaitGroup
 	// Check whether the message is desired
@@ -137,22 +137,13 @@ func (g *Gossiper) statusMessageHandler(msg utils.StatusPacket, sender string) {
 				g.sendAcknowledgement(sender)
 				wg.Done()
 			}()
-		} else if msgAv, msgs := g.AdditionalMessages(msg); msgAv {
-			// log.Println("Sending messages to", g.name, sender)
-			sort.Sort(msgs)
+		} else if msgAv, msg := g.AdditionalMessages(msg); msgAv {
+			// fmt.Printf("Sending requested message %s %d to %s\n", msg.Origin, msg.ID, sender)
 			wg.Add(1)
 			go func() {
-				g.startRumorMongeringConnection(sender, utils.GossipPacket{Rumor: &msgs[0]})
+				g.startRumorMongeringConnection(sender, utils.GossipPacket{Rumor: &msg})
 				wg.Done()
 			}()
-			for _, rm := range msgs[1:] {
-				gossipPacket := utils.GossipPacket{Rumor: &rm}
-				wg.Add(1)
-				go func() {
-					g.sendToPeer(gossipPacket, sender)
-					wg.Done()
-				}()
-			}
 		} else {
 			// This case will only happen to the initiator of the rumor mongering
 			fmt.Printf("IN SYNC WITH %s\n", sender)
@@ -162,7 +153,6 @@ func (g *Gossiper) statusMessageHandler(msg utils.StatusPacket, sender string) {
 }
 
 func (g *Gossiper) privateMessageHandler(msg utils.PrivateMessage) {
-	log.Printf("%s: Received a private message\n", g.name)
 	if msg.Destination == g.name {
 		fmt.Printf("PRIVATE origin %s hop-limit %d contents %s\n", msg.Origin, msg.HopLimit, msg.Text)
 		g.appendPrivateMessages(msg.Origin, msg)
@@ -170,12 +160,13 @@ func (g *Gossiper) privateMessageHandler(msg utils.PrivateMessage) {
 		var wg sync.WaitGroup
 		msg.HopLimit -= 1
 		if msg.HopLimit <= 0 {
-			log.Printf("%s: ATTENTION: Dropping a private message for %s\n", g.name, msg.Destination)
+			// log.Printf("%s: ATTENTION: Dropping a private message for %s\n", g.name, msg.Destination)
 			return
 		}
 		gossipMessage := utils.GossipPacket{Private: &msg}
 		wg.Add(1)
 		go func() {
+			// fmt.Printf("%d: Send the private message\n", time.Now().Second())
 			g.sendToPeer(gossipMessage, g.getNextHop(msg.Destination))
 			wg.Done()
 		}()
@@ -190,7 +181,9 @@ func (g *Gossiper) startRumorMongering(msg utils.RumorMessage) {
 		if peer == "" {
 			break
 		}
+		// If it return true, coinflip decided to continue mongering, else it stops
 		if !g.startRumorMongeringConnection(peer, gossipPacket) {
+			fmt.Println("Stopping rumormongering")
 			break
 		}
 		peer = g.pickRandomPeerForMongering(peer)
@@ -205,6 +198,7 @@ func (g *Gossiper) startRumorMongeringConnection(peer string, gossipPacket utils
 
 	wg.Add(1)
 	go func() {
+		fmt.Printf("%d: Initiating rumor mongering connection \n", time.Now().Second())
 		g.sendToPeer(gossipPacket, peer)
 		wg.Done()
 	}()
@@ -216,23 +210,18 @@ Loop:
 
 		select {
 		case <-timeout:
+			fmt.Printf("%d: TIMEOUT\n", time.Now().Second())
 			break Loop
 		case msg := <-g.getRumorMongeringChannel(peer):
 			// Send out additional messages that were requested
-			if new, msgs := g.AdditionalMessages(msg); new {
-				// Sort messages to ensure that messages are sent out in the right order
-				sort.Sort(msgs)
-				for _, newMsg := range msgs {
-					wg.Add(1)
-					go func(newMsg utils.RumorMessage) {
-						g.sendToPeer(utils.GossipPacket{Rumor: &newMsg}, peer)
-						wg.Done()
-					}(newMsg)
-				}
+			if new, newMsg := g.AdditionalMessages(msg); new {
+				fmt.Printf("%d: Sending one of the unknown messages: %s %d\n", time.Now().Second(), newMsg.Origin, newMsg.ID)
+				g.sendToPeer(utils.GossipPacket{Rumor: &newMsg}, peer)
 			} else if g.HasLessMessagesThan(msg) {
 				// If no new messages requested, check whether peer has unknown messages and request them
 				wg.Add(1)
 				go func() {
+					fmt.Printf("%d: Sending acknowledgement to %s to get unknown message\n", time.Now().Second(), peer)
 					g.sendAcknowledgement(peer)
 					wg.Done()
 				}()
@@ -255,6 +244,7 @@ func (g *Gossiper) generateStatusPacket() utils.StatusPacket {
 	g.wantedMessagesLock.RLock()
 	for k, v := range g.WantedMessages {
 		peer := utils.PeerStatus{Identifier: k, NextID: v}
+		//fmt.Printf("Want: %s %d\n", k, v)
 		packet.Want = append(packet.Want, peer)
 	}
 	g.wantedMessagesLock.RUnlock()
@@ -286,6 +276,7 @@ func (g *Gossiper) broadcastMessage(packet utils.GossipPacket, receivedFrom stri
 		if p != receivedFrom {
 			wg.Add(1)
 			go func(p string) {
+				// fmt.Printf("%d: Broadcasting\n", time.Now().Second())
 				g.sendToPeer(packet, p)
 				wg.Done()
 			}(p)
@@ -307,10 +298,9 @@ func (g *Gossiper) HasLessMessagesThan(status utils.StatusPacket) bool {
 }
 
 // Checks whether this gossiper has additional messages for the peer that sent the status packet
-func (g *Gossiper) AdditionalMessages(status utils.StatusPacket) (bool, utils.RumorMessages) {
-	messages := []utils.RumorMessage{}
-	missingIds := []string{}
+func (g *Gossiper) AdditionalMessages(status utils.StatusPacket) (bool, utils.RumorMessage) {
 	msgAv := false
+	var msg utils.RumorMessage
 
 	// Check whether all identifiers exist
 	g.wantedMessagesLock.RLock()
@@ -325,32 +315,27 @@ func (g *Gossiper) AdditionalMessages(status utils.StatusPacket) (bool, utils.Ru
 		}
 		if !hasId {
 			// Add the id to the missingIds
-			missingIds = append(missingIds, id)
 			msgAv = true
+			msg = g.ReceivedMessages[id].GetById(1)
+			break
 		}
 	}
 	g.wantedMessagesLock.RUnlock()
-
-	// Add all messages for missing identifiers
-	for _, id := range missingIds {
-		// Adding all messages for missing identifiers
-		for ix, _ := range g.getReceivedMessages(id) {
-			messages = append(messages, g.ReceivedMessages[id][ix])
-			msgAv = true
-		}
+	if msgAv {
+		return msgAv, msg
 	}
 
+	g.receivedMessagesLock.RLock()
 	// Add missing single messages
-	for i, ps := range status.Want {
+	for _, ps := range status.Want {
 		// Check for new messages for identifier
-		j := g.getWantedMessages(ps.Identifier)
-		for j > status.Want[i].NextID && j-1 > 0 {
-			messages = append(messages, g.getReceivedMessages(ps.Identifier)[j-2])
+		if g.getWantedMessages(ps.Identifier) > ps.NextID {
+			msg = g.ReceivedMessages[ps.Identifier].GetById(int(ps.NextID))
 			msgAv = true
-			j--
 		}
 	}
-	return msgAv, messages
+	g.receivedMessagesLock.RUnlock()
+	return msgAv, msg
 }
 
 func (g *Gossiper) pickRandomPeerForMongering(origin string) string {

@@ -61,6 +61,10 @@ func (rm RumorMessages) Len() int {
 	return len(rm)
 }
 
+func (rm RumorMessages) GetById(id int) RumorMessage {
+	return rm[id-1]
+}
+
 func (rm RumorMessages) Less(i, j int) bool {
 	return rm[i].ID < rm[j].ID
 }
