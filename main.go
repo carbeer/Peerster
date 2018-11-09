@@ -17,6 +17,7 @@ var gossipPort int
 var peers []string
 var simple bool
 var quit chan bool
+var rtimer int
 var runUI bool
 
 func main() {
@@ -25,7 +26,7 @@ func main() {
 	flag.BoolVar(&simple, "simple", false, "run gossiper in simple broadcast mode")
 	tmp := flag.String("gossipAddr", "127.0.0.1:5000", "ip:port for the gossiper")
 	peerList := flag.String("peers", "", "comma seperated list of peers of the form ip:port")
-	rtimer := strconv.Itoa(*flag.Int("rtimer", 0, "route rumors sending period in seconds, 0 to disable")) + "s"
+	flag.IntVar(&rtimer, "rtimer", 0, "route rumors sending period in seconds, 0 to disable")
 	flag.BoolVar(&runUI, "runUI", false, "serve UI with this gossiper")
 	flag.Parse()
 
@@ -52,16 +53,14 @@ func main() {
 		go g.AntiEntropy()
 	}
 
-	if rtimer != "0s" {
-		go g.RouteRumor(rtimer)
+	if rtimer != 0 {
+		go g.RouteRumor(strconv.Itoa(rtimer) + "s")
 	}
 
 	if runUI {
 		go g.BootstrapUI()
 	}
-
 	<-quit
-
 }
 
 func validateAddress(address string) {

@@ -91,7 +91,7 @@ func (g *Gossiper) simpleMessageHandler(msg utils.SimpleMessage) {
 }
 
 func (g *Gossiper) rumorMessageHandler(msg utils.RumorMessage, sender string) {
-	fmt.Printf("RUMOR origin %s from %s ID %s contents %s\n", msg.Origin, sender, msg.ID, msg.Text)
+	fmt.Printf("RUMOR origin %s from %s ID %d contents %s\n", msg.Origin, sender, msg.ID, msg.Text)
 	fmt.Printf("PEERS %v\n", fmt.Sprint(strings.Join(g.peers, ",")))
 	origin := msg.Origin
 	var wg sync.WaitGroup
@@ -199,8 +199,8 @@ Loop:
 				for _, newMsg := range msgs {
 					newGossipPacket := utils.GossipPacket{Rumor: &newMsg}
 					wg.Add(1)
-					go func(newMsg interface{}) {
-						g.sendToPeer(newGossipPacket, peer)
+					go func(newMsg utils.RumorMessage) {
+						g.sendToPeer(utils.GossipPacket{Rumor: &newMsg}, peer)
 						wg.Done()
 					}(newMsg)
 				}
