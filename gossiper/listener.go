@@ -22,7 +22,7 @@ func (g *Gossiper) ListenClientMessages(quit chan bool) {
 		fmt.Println("CLIENT MESSAGE", msg.Text)
 		fmt.Printf("PEERS %v\n", fmt.Sprint(strings.Join(g.peers, ",")))
 
-		go g.ClientMessageHandler(msg.Text)
+		go g.ClientMessageHandler(*msg)
 		// broadcast message to all peers
 	}
 	quit <- true
@@ -44,13 +44,13 @@ func (g *Gossiper) ListenPeerMessages(quit chan bool) {
 	quit <- true
 }
 
-func (g *Gossiper) ClientMessageHandler(msg string) {
+func (g *Gossiper) ClientMessageHandler(msg utils.Message) {
 	var wg sync.WaitGroup
 	var gossipPacket utils.GossipPacket
 
 	// Just broadcast using a simple message
 	if g.simple {
-		simpleMessage := utils.SimpleMessage{OriginalName: g.name, RelayPeerAddr: g.Address.String(), Contents: msg}
+		simpleMessage := utils.SimpleMessage{OriginalName: g.name, RelayPeerAddr: g.Address.String(), Contents: msg.Text}
 		gossipPacket = utils.GossipPacket{Simple: &simpleMessage}
 		for _, p := range g.peers {
 			wg.Add(1)
@@ -61,8 +61,12 @@ func (g *Gossiper) ClientMessageHandler(msg string) {
 		}
 
 	} else {
-		// Make a rumor message our of it
-		g.newRumorMongeringMessage(msg)
+		if msg.Destination == "" {
+			// Make a rumor message out of it
+			g.newRumorMongeringMessage(msg.Text)
+		} else if msg.Text != "" {
+			g.newPrivateMessage(msg)
+		}
 	}
 	wg.Wait()
 }

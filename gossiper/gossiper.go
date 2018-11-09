@@ -6,7 +6,6 @@ import (
 	"math/rand"
 	"net"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -27,11 +26,11 @@ type Gossiper struct {
 	// Addresses of all peers
 	peers     []string
 	simple    bool
-	idCounter int
+	idCounter uint32
 	// Sorted list of received messages
 	ReceivedMessages map[string]utils.RumorMessages
 	// Keeps track of wanted messages
-	WantedMessages map[string]string
+	WantedMessages map[string]uint32
 	// Tracks the status packets from rumorMongerings owned by this peer
 	rumorMongeringChannel map[string]chan utils.StatusPacket
 	// next hop map Origin --> Address
@@ -56,9 +55,9 @@ func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []stri
 		name:                      name,
 		peers:                     peers,
 		simple:                    simple,
-		idCounter:                 int(1),
+		idCounter:                 uint32(1),
 		ReceivedMessages:          make(map[string]utils.RumorMessages),
-		WantedMessages:            make(map[string]string),
+		WantedMessages:            make(map[string]uint32),
 		rumorMongeringChannel:     make(map[string]chan utils.StatusPacket, 2048),
 		nextHop:                   make(map[string]string),
 		receivedMessagesLock:      sync.RWMutex{},
@@ -97,7 +96,7 @@ func (g *Gossiper) rumorMessageHandler(msg utils.RumorMessage, sender string) {
 	origin := msg.Origin
 	var wg sync.WaitGroup
 	// Check whether the message is desired
-	if origin != g.name && (g.getWantedMessages(origin) == msg.ID || (g.getWantedMessages(origin) == "" && msg.ID == "1")) {
+	if origin != g.name && (g.getWantedMessages(origin) == msg.ID || (g.getWantedMessages(origin) == 0 && msg.ID == 1)) {
 		g.addToKnownMessages(msg)
 
 		// If it's a desired message, update the next hop
@@ -230,9 +229,7 @@ func (g *Gossiper) generateStatusPacket() utils.StatusPacket {
 	packet := utils.StatusPacket{}
 	g.wantedMessagesLock.RLock()
 	for k, v := range g.WantedMessages {
-		id, e := strconv.Atoi(v)
-		utils.HandleError(e)
-		peer := utils.PeerStatus{Identifier: k, NextID: uint32(id)}
+		peer := utils.PeerStatus{Identifier: k, NextID: v}
 		packet.Want = append(packet.Want, peer)
 	}
 	g.wantedMessagesLock.RUnlock()
@@ -277,7 +274,7 @@ func (g *Gossiper) HasLessMessagesThan(status utils.StatusPacket) bool {
 	for i := range status.Want {
 		id := status.Want[i].Identifier
 		// Check if Origin and IDs all known
-		if g.getWantedMessages(id) == "" || g.getWantedMessages(id) < strconv.Itoa(int(status.Want[i].NextID)) {
+		if g.getWantedMessages(id) == 0 || g.getWantedMessages(id) < status.Want[i].NextID {
 			return true
 		}
 	}
@@ -321,9 +318,9 @@ func (g *Gossiper) AdditionalMessages(status utils.StatusPacket) (bool, utils.Ru
 	// Add missing single messages
 	for i, ps := range status.Want {
 		// Check for new messages for identifier
-		j, _ := strconv.Atoi(g.getWantedMessages(ps.Identifier))
-		for j > int(status.Want[i].NextID) && j-1 > 0 {
-			messages = append(messages, g.getReceivedMessages(ps.Identifier)[int(j-2)])
+		j := g.getWantedMessages(ps.Identifier)
+		for j > status.Want[i].NextID && j-1 > 0 {
+			messages = append(messages, g.getReceivedMessages(ps.Identifier)[j-2])
 			msgAv = true
 			j--
 		}
@@ -344,9 +341,7 @@ func (g *Gossiper) pickRandomPeerForMongering(origin string) string {
 }
 
 func (g *Gossiper) addToKnownMessages(msg utils.RumorMessage) {
-	id, e := strconv.Atoi(msg.ID)
-	utils.HandleError(e)
-	g.setWantedMessages(msg.Origin, strconv.Itoa(id+1))
+	g.setWantedMessages(msg.Origin, msg.ID+1)
 	g.appendReceivedMessages(msg.Origin, msg)
 }
 
@@ -357,7 +352,7 @@ func (g *Gossiper) updateNextHop(origin, sender string) {
 
 func (g *Gossiper) newRumorMongeringMessage(msg string) {
 	var wg sync.WaitGroup
-	rumorMessage := utils.RumorMessage{Origin: g.name, ID: strconv.Itoa(g.idCounter), Text: msg}
+	rumorMessage := utils.RumorMessage{Origin: g.name, ID: g.idCounter, Text: msg}
 	g.idCounter = g.idCounter + 1
 	g.addToKnownMessages(rumorMessage)
 	wg.Add(1)
@@ -366,6 +361,10 @@ func (g *Gossiper) newRumorMongeringMessage(msg string) {
 		wg.Done()
 	}()
 	wg.Wait()
+}
+
+func (g *Gossiper) newPrivateMessage(msg utils.Message) {
+
 }
 
 // Function for GUI

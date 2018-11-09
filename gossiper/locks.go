@@ -15,14 +15,14 @@ func (g *Gossiper) appendReceivedMessages(key string, value utils.RumorMessage) 
 	g.receivedMessagesLock.Unlock()
 }
 
-func (g *Gossiper) getWantedMessages(key string) string {
+func (g *Gossiper) getWantedMessages(key string) uint32 {
 	g.wantedMessagesLock.RLock()
 	val := g.WantedMessages[key]
 	g.wantedMessagesLock.RUnlock()
 	return val
 }
 
-func (g *Gossiper) setWantedMessages(key string, value string) {
+func (g *Gossiper) setWantedMessages(key string, value uint32) {
 	g.wantedMessagesLock.Lock()
 	g.WantedMessages[key] = value
 	g.wantedMessagesLock.Unlock()

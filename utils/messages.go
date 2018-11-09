@@ -13,7 +13,7 @@ type SimpleMessage struct {
 
 type RumorMessage struct {
 	Origin string
-	ID     string
+	ID     uint32
 	Text   string
 }
 
