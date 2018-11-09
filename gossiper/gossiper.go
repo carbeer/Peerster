@@ -29,6 +29,7 @@ type Gossiper struct {
 	idCounter uint32
 	// Sorted list of received messages
 	ReceivedMessages map[string]utils.RumorMessages
+	PrivateMessages  map[string][]utils.PrivateMessage
 	// Keeps track of wanted messages
 	WantedMessages map[string]uint32
 	// Tracks the status packets from rumorMongerings owned by this peer
@@ -38,6 +39,7 @@ type Gossiper struct {
 
 	// Locks for maps
 	receivedMessagesLock      sync.RWMutex
+	privateMessagesLock       sync.RWMutex
 	wantedMessagesLock        sync.RWMutex
 	rumorMongeringChannelLock sync.RWMutex
 	nextHopLock               sync.RWMutex
@@ -57,10 +59,12 @@ func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []stri
 		simple:                    simple,
 		idCounter:                 uint32(1),
 		ReceivedMessages:          make(map[string]utils.RumorMessages),
+		PrivateMessages:           make(map[string][]utils.PrivateMessage),
 		WantedMessages:            make(map[string]uint32),
 		rumorMongeringChannel:     make(map[string]chan utils.StatusPacket, 2048),
 		nextHop:                   make(map[string]string),
 		receivedMessagesLock:      sync.RWMutex{},
+		privateMessagesLock:       sync.RWMutex{},
 		wantedMessagesLock:        sync.RWMutex{},
 		rumorMongeringChannelLock: sync.RWMutex{},
 		nextHopLock:               sync.RWMutex{},
@@ -157,6 +161,28 @@ func (g *Gossiper) statusMessageHandler(msg utils.StatusPacket, sender string) {
 	wg.Wait()
 }
 
+func (g *Gossiper) privateMessageHandler(msg utils.PrivateMessage) {
+	log.Printf("%s: Received a private message\n", g.name)
+	if msg.Destination == g.name {
+		fmt.Printf("PRIVATE origin %s hop-limit %d contents %s\n", msg.Origin, msg.HopLimit, msg.Text)
+		g.appendPrivateMessages(msg.Origin, msg)
+	} else {
+		var wg sync.WaitGroup
+		msg.HopLimit -= 1
+		if msg.HopLimit <= 0 {
+			log.Printf("%s: ATTENTION: Dropping a private message for %s\n", g.name, msg.Destination)
+			return
+		}
+		gossipMessage := utils.GossipPacket{Private: &msg}
+		wg.Add(1)
+		go func() {
+			g.sendToPeer(gossipMessage, g.getNextHop(msg.Destination))
+			wg.Done()
+		}()
+		wg.Wait()
+	}
+}
+
 func (g *Gossiper) startRumorMongering(msg utils.RumorMessage) {
 	gossipPacket := utils.GossipPacket{Rumor: &msg}
 	peer := g.pickRandomPeerForMongering("")
@@ -186,7 +212,7 @@ Loop:
 	for {
 		// Make a new channel
 		timeout := make(chan bool)
-		go utils.TimeoutCounter(timeout, "1s")
+		go utils.TimeoutCounter(timeout, utils.GetRumorMongeringTimeout())
 
 		select {
 		case <-timeout:
@@ -197,7 +223,6 @@ Loop:
 				// Sort messages to ensure that messages are sent out in the right order
 				sort.Sort(msgs)
 				for _, newMsg := range msgs {
-					newGossipPacket := utils.GossipPacket{Rumor: &newMsg}
 					wg.Add(1)
 					go func(newMsg utils.RumorMessage) {
 						g.sendToPeer(utils.GossipPacket{Rumor: &newMsg}, peer)
@@ -364,27 +389,14 @@ func (g *Gossiper) newRumorMongeringMessage(msg string) {
 }
 
 func (g *Gossiper) newPrivateMessage(msg utils.Message) {
-
-}
-
-// Function for GUI
-func (g *Gossiper) GetAllReceivedMessages() string {
-	allMsg := ""
-	g.receivedMessagesLock.RLock()
-	for _, v := range g.ReceivedMessages {
-		for _, rm := range v {
-			log.Println(rm)
-			allMsg = allMsg + rm.Text + "\n"
-		}
-	}
-	g.receivedMessagesLock.RUnlock()
-	return allMsg
-}
-
-func (g *Gossiper) GetAllPeers() string {
-	allPeers := ""
-	for _, peer := range g.peers {
-		allPeers = allPeers + peer + "\n"
-	}
-	return allPeers
+	var wg sync.WaitGroup
+	privateMessage := utils.PrivateMessage{Origin: g.name, ID: 0, Text: msg.Text, Destination: msg.Destination, HopLimit: utils.GetHopLimitConstant()}
+	gossipMessage := utils.GossipPacket{Private: &privateMessage}
+	wg.Add(1)
+	go func() {
+		fmt.Printf("SENDING PRIVATE MESSAGE %s TO %s\n", msg.Text, msg.Destination)
+		g.sendToPeer(gossipMessage, g.getNextHop(msg.Destination))
+		wg.Done()
+	}()
+	wg.Wait()
 }

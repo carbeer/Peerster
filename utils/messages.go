@@ -2,7 +2,6 @@ package utils
 
 import (
 	"fmt"
-	"strconv"
 )
 
 type SimpleMessage struct {
@@ -17,8 +16,17 @@ type RumorMessage struct {
 	Text   string
 }
 
+type PrivateMessage struct {
+	Origin      string
+	ID          uint32
+	Text        string
+	Destination string
+	HopLimit    uint32
+}
+
 type Message struct {
-	Text string
+	Text        string
+	Destination string
 }
 
 type PeerStatus struct {
@@ -40,9 +48,10 @@ func (sp *StatusPacket) ToString() string {
 }
 
 type GossipPacket struct {
-	Simple *SimpleMessage
-	Rumor  *RumorMessage
-	Status *StatusPacket
+	Simple  *SimpleMessage
+	Rumor   *RumorMessage
+	Status  *StatusPacket
+	Private *PrivateMessage
 }
 
 // Make RumorMessages sortable according to ID
@@ -53,9 +62,7 @@ func (rm RumorMessages) Len() int {
 }
 
 func (rm RumorMessages) Less(i, j int) bool {
-	a, _ := strconv.Atoi(rm[i].ID)
-	b, _ := strconv.Atoi(rm[j].ID)
-	return a < b
+	return rm[i].ID < rm[j].ID
 }
 
 func (rm RumorMessages) Swap(i, j int) {

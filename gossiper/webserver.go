@@ -1,7 +1,6 @@
 package gossiper
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -11,18 +10,30 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type UserInterface struct {
-	gossiper *Gossiper
-	uiPort   int
-	ip       string
+// Helper functions
+
+func (g *Gossiper) GetAllReceivedMessages() string {
+	allMsg := ""
+	g.receivedMessagesLock.RLock()
+	for _, v := range g.ReceivedMessages {
+		for _, rm := range v {
+			log.Println(rm)
+			allMsg = allMsg + rm.Text + "\n"
+		}
+	}
+	g.receivedMessagesLock.RUnlock()
+	return allMsg
 }
 
-func marshalAndWrite(w http.ResponseWriter, msg interface{}) {
-	bytes, e := json.Marshal(msg)
-	utils.HandleError(e)
-	w.Write(bytes)
+func (g *Gossiper) GetAllPeers() string {
+	allPeers := ""
+	for _, peer := range g.peers {
+		allPeers = allPeers + peer + "\n"
+	}
+	return allPeers
 }
 
+// Handler functions
 func (g *Gossiper) peerHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
@@ -30,10 +41,10 @@ func (g *Gossiper) peerHandler(w http.ResponseWriter, r *http.Request) {
 		g.addPeerToListIfApplicable(peer)
 	case http.MethodGet:
 		peers := g.GetAllPeers()
-		marshalAndWrite(w, peers)
+		utils.MarshalAndWrite(w, peers)
 		break
 	default:
-		marshalAndWrite(w, http.StatusMethodNotAllowed)
+		utils.MarshalAndWrite(w, http.StatusMethodNotAllowed)
 	}
 }
 
@@ -44,25 +55,29 @@ func (g *Gossiper) handleMessage(w http.ResponseWriter, r *http.Request) {
 		var wg sync.WaitGroup
 		wg.Add(1)
 		go func() {
-			g.ClientMessageHandler(message)
+			g.ClientMessageHandler(utils.Message{Text: message})
 			wg.Done()
 		}()
 		wg.Wait()
 	case http.MethodGet:
 		messages := g.GetAllReceivedMessages()
-		marshalAndWrite(w, messages)
+		utils.MarshalAndWrite(w, messages)
 		break
 	default:
-		marshalAndWrite(w, http.StatusMethodNotAllowed)
+		utils.MarshalAndWrite(w, http.StatusMethodNotAllowed)
 	}
 }
 
 func (g *Gossiper) getId(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
-		marshalAndWrite(w, g.name)
+		utils.MarshalAndWrite(w, g.name)
 		return
 	}
-	marshalAndWrite(w, http.StatusMethodNotAllowed)
+	utils.MarshalAndWrite(w, http.StatusMethodNotAllowed)
+}
+
+func (g *Gossiper) getKnownOrigins(w http.ResponseWriter, r *http.Request) {
+	log.Print("blalalsdkjfkjdsf")
 }
 
 func (g *Gossiper) BootstrapUI() {
@@ -71,6 +86,7 @@ func (g *Gossiper) BootstrapUI() {
 	r.HandleFunc("/message", g.handleMessage).Methods("POST", "GET")
 	r.HandleFunc("/node", g.peerHandler).Methods("POST", "GET")
 	r.HandleFunc("/id", g.getId).Methods("GET")
+	r.HandleFunc("/origins", g.getKnownOrigins).Methods("GET")
 	r.Handle("/", http.FileServer(http.Dir("webpage"))).Methods("GET")
 	r.PathPrefix("/js/").Handler(http.StripPrefix("/js/", http.FileServer(http.Dir("webpage/js/"))))
 	utils.HandleError(http.ListenAndServe(fmt.Sprintf("%s:%s", g.Address.IP, "8080"), r))

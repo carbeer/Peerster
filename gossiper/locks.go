@@ -15,6 +15,19 @@ func (g *Gossiper) appendReceivedMessages(key string, value utils.RumorMessage) 
 	g.receivedMessagesLock.Unlock()
 }
 
+func (g *Gossiper) getPrivateMessages(key string) []utils.PrivateMessage {
+	g.privateMessagesLock.RLock()
+	val := g.PrivateMessages[key]
+	g.privateMessagesLock.RUnlock()
+	return val
+}
+
+func (g *Gossiper) appendPrivateMessages(key string, value utils.PrivateMessage) {
+	g.privateMessagesLock.Lock()
+	g.PrivateMessages[key] = append(g.PrivateMessages[key], value)
+	g.privateMessagesLock.Unlock()
+}
+
 func (g *Gossiper) getWantedMessages(key string) uint32 {
 	g.wantedMessagesLock.RLock()
 	val := g.WantedMessages[key]

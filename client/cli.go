@@ -23,12 +23,34 @@ func main() {
 	flag.Parse()
 	log.Println("UIPort has value", uiPort)
 	log.Println("msg has value", msg)
-	SendMessage(msg, uiPort)
+	log.Println("dest has value", dest)
+
+	if msg != "" && dest != "" {
+		SendPrivateMessage(msg, uiPort, dest)
+	} else {
+		SendMessage(msg, uiPort)
+	}
 
 }
 
 func SendMessage(msg string, uiPort int) {
 	message := utils.Message{Text: msg}
+
+	log.Println("Encoding the message")
+	packetBytes, e := protobuf.Encode(&message)
+	utils.HandleError(e)
+
+	log.Println("Creating a client connection")
+	udpConn, e := net.Dial("udp4", fmt.Sprintf("%s:%d", ip, uiPort))
+	utils.HandleError(e)
+
+	log.Println("Writing the message")
+	_, e = udpConn.Write(packetBytes)
+	utils.HandleError(e)
+}
+
+func SendPrivateMessage(msg string, uiPort int, dest string) {
+	message := utils.Message{Text: msg, Destination: dest}
 
 	log.Println("Encoding the message")
 	packetBytes, e := protobuf.Encode(&message)

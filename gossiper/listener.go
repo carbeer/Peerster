@@ -80,5 +80,7 @@ func (g *Gossiper) peerMessageHandler(msg utils.GossipPacket, sender string) {
 		g.rumorMessageHandler(*msg.Rumor, sender)
 	} else if msg.Status != nil {
 		g.statusMessageHandler(*msg.Status, sender)
+	} else if msg.Private != nil {
+		g.privateMessageHandler(*msg.Private)
 	}
 }

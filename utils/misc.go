@@ -1,8 +1,10 @@
 package utils
 
 import (
+	"encoding/json"
 	"log"
 	"math/rand"
+	"net/http"
 	"time"
 )
 
@@ -28,4 +30,10 @@ func TimeoutCounter(channel chan<- bool, frequency string) {
 	<-time.NewTicker(duration).C
 	channel <- true
 	close(channel)
+}
+
+func MarshalAndWrite(w http.ResponseWriter, msg interface{}) {
+	bytes, e := json.Marshal(msg)
+	HandleError(e)
+	w.Write(bytes)
 }
