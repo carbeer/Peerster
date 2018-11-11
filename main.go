@@ -1,10 +1,8 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 
@@ -30,11 +28,10 @@ func main() {
 	flag.BoolVar(&runUI, "runUI", false, "serve UI with this gossiper")
 	flag.Parse()
 
-	validateAddress(*tmp)
 	elems := strings.Split(*tmp, ":")
 	gossipIp = elems[0]
 	gossipPort, _ = strconv.Atoi(elems[1])
-	peers = validatePeerList(*peerList)
+	peers = strings.Split(*peerList, ",")
 
 	fmt.Println("UIPort has value", uiPort)
 	fmt.Println("gossipAddr has value", *tmp)
@@ -62,28 +59,4 @@ func main() {
 		go g.BootstrapUI()
 	}
 	<-quit
-}
-
-func validateAddress(address string) {
-	var err error
-	tmp := strings.Split(address, ":")
-
-	if len(tmp) == 2 {
-		if _, errPort := strconv.Atoi(tmp[1]); errPort == nil {
-			return
-		} else {
-			err = errPort
-		}
-	} else {
-		err = errors.New("A valid address must have the format ip:port")
-	}
-	log.Println("An error occured: " + err.Error())
-}
-
-func validatePeerList(list string) []string {
-	addresses := strings.Split(list, ",")
-	for _, a := range addresses {
-		validateAddress(a)
-	}
-	return addresses
 }

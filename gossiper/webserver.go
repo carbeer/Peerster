@@ -170,5 +170,5 @@ func (g *Gossiper) BootstrapUI() {
 	r.HandleFunc("/download", g.handleDownload).Methods("POST")
 	r.Handle("/", http.FileServer(http.Dir("webpage"))).Methods("GET")
 	r.PathPrefix("/js/").Handler(http.StripPrefix("/js/", http.FileServer(http.Dir("webpage/js/"))))
-	utils.HandleError(http.ListenAndServe(fmt.Sprintf("%s:%s", g.Address.IP, utils.GetUIPort()), r))
+	utils.HandleError(http.ListenAndServe(fmt.Sprintf("%s:%s", utils.GetClientIp(), utils.GetUIPort()), r))
 }

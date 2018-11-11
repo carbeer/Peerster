@@ -16,9 +16,9 @@ import (
 
 func HandleError(e error) {
 	if e != nil {
-		log.Fatal("General error ", e)
 		fmt.Println("General error ", e)
 		debug.PrintStack()
+		// log.Fatal("General error ", e)
 	}
 }
 

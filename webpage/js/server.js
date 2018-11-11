@@ -29,7 +29,7 @@ $(document).ready(function () {
   })
 });
 
-var privateMessagePeer = ""
+var privateMessagePeer = "";
 
 function fetchId() {
   $.ajax({
@@ -60,6 +60,7 @@ function getMessages() {
     type: "GET",
     success: function (data) {
       messages = JSON.parse(data);
+      messages = orderKnownMessages(messages, $('#chat').val());
       $('#chat').val(messages);
     },
     complete: function () {
@@ -74,6 +75,7 @@ function getPrivateMessages() {
     type: "GET",
     success: function (data) {
       messages = JSON.parse(data);
+      messages = orderKnownMessages(messages, $('#privateChat').val());
       $('#privateChat').val(messages);
     },
     complete: function () {
@@ -185,3 +187,23 @@ function openPrivateDialog(origin) {
   document.getElementById("privateMessageDialog").style.display = "block";
   getPrivateMessages();
 }
+
+Array.prototype.diff = function(a) {
+  return this.filter(function(i) {return a.indexOf(i) < 0;});
+};
+
+function orderKnownMessages(newMessages, orderedMessages) {
+  if (orderedMessages == null) {
+    return newMessages;
+  }
+  var splitOrdered = orderedMessages.split("\n");
+  var splitNew = newMessages.split("\n");
+
+  var real = splitNew.diff(splitOrdered);
+  
+  real.forEach(elem => {
+    orderedMessages = orderedMessages + elem  + "\n";
+  })
+  return orderedMessages;
+}
+
