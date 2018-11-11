@@ -158,7 +158,7 @@ func (g *Gossiper) handleDownload(w http.ResponseWriter, r *http.Request) {
 }
 
 func (g *Gossiper) BootstrapUI() {
-	log.Println("Starting UI on " + fmt.Sprintf("%s:%s", g.Address.IP, "8080"))
+	log.Println("Starting UI on " + fmt.Sprintf("%s:%s", g.Address.IP, utils.GetUIPort()))
 	r := mux.NewRouter()
 	r.SkipClean(true)
 	r.HandleFunc("/message", g.handleMessage).Methods("POST", "GET")
@@ -170,5 +170,5 @@ func (g *Gossiper) BootstrapUI() {
 	r.HandleFunc("/download", g.handleDownload).Methods("POST")
 	r.Handle("/", http.FileServer(http.Dir("webpage"))).Methods("GET")
 	r.PathPrefix("/js/").Handler(http.StripPrefix("/js/", http.FileServer(http.Dir("webpage/js/"))))
-	utils.HandleError(http.ListenAndServe(fmt.Sprintf("%s:%s", g.Address.IP, "8080"), r))
+	utils.HandleError(http.ListenAndServe(fmt.Sprintf("%s:%s", g.Address.IP, utils.GetUIPort()), r))
 }

@@ -2,7 +2,6 @@ package gossiper
 
 import (
 	"fmt"
-	"log"
 	"math/rand"
 	"net"
 	"strings"
@@ -31,6 +30,7 @@ type Gossiper struct {
 	// Keeps track of wanted messages
 	// Tracks the status packets from rumorMongerings owned by this peer
 	rumorMongeringChannel map[string]chan utils.StatusPacket
+	dataRequestChannel    map[string]chan bool
 	// next hop map Origin --> Address
 	nextHop map[string]utils.HopInfo
 	// Get File by Metahash
@@ -47,6 +47,7 @@ type Gossiper struct {
 	storedFilesLock           sync.RWMutex
 	storedChunksLock          sync.RWMutex
 	requestedChunksLock       sync.RWMutex
+	dataRequestChannelLock    sync.RWMutex
 }
 
 func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []string, simple bool) *Gossiper {
@@ -69,6 +70,7 @@ func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []stri
 		storedFiles:               make(map[string]utils.File),
 		storedChunks:              make(map[string][]byte),
 		requestedChunks:           make(map[string]utils.ChunkInfo),
+		dataRequestChannel:        make(map[string]chan bool),
 		receivedMessagesLock:      sync.RWMutex{},
 		privateMessagesLock:       sync.RWMutex{},
 		rumorMongeringChannelLock: sync.RWMutex{},
@@ -76,6 +78,7 @@ func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []stri
 		storedFilesLock:           sync.RWMutex{},
 		storedChunksLock:          sync.RWMutex{},
 		requestedChunksLock:       sync.RWMutex{},
+		dataRequestChannelLock:    sync.RWMutex{},
 	}
 }
 
@@ -100,18 +103,19 @@ func (g *Gossiper) rumorMessageHandler(msg utils.RumorMessage, sender string) {
 	origin := msg.Origin
 	var wg sync.WaitGroup
 
-	g.updateNextHop(msg, sender)
 	// Check whether the message is desired
-	if origin != g.name && len(g.getReceivedMessages(origin))+1 == int(msg.ID) {
-		g.addToKnownMessages(msg)
+	if origin != g.name {
+		g.updateNextHop(msg, sender)
+		if len(g.getReceivedMessages(origin))+1 == int(msg.ID) {
+			g.addToKnownMessages(msg)
 
-		wg.Add(1)
-		go func() {
-			g.startRumorMongering(msg)
-			wg.Done()
-		}()
+			wg.Add(1)
+			go func() {
+				g.startRumorMongering(msg)
+				wg.Done()
+			}()
+		}
 	}
-	fmt.Println("Sending ack because of new message received")
 	g.sendAcknowledgement(sender)
 	wg.Wait()
 }
@@ -155,9 +159,9 @@ func (g *Gossiper) privateMessageHandler(msg utils.PrivateMessage) {
 	}
 }
 
-func (g *Gossiper) dataRequestHandler(msg utils.DataRequest) {
+func (g *Gossiper) dataRequestHandler(msg utils.DataRequest, sender string) {
 	if msg.Destination == g.name {
-		g.newDataReplyMessage(msg)
+		g.newDataReplyMessage(msg, sender)
 	} else {
 		msg.HopLimit -= 1
 		if msg.HopLimit <= 0 {
@@ -204,17 +208,14 @@ func (g *Gossiper) startRumorMongering(msg utils.RumorMessage) {
 
 func (g *Gossiper) startRumorMongeringConnection(peer string, gossipPacket utils.GossipPacket) bool {
 	// Create a channel that is added to the list of owned rumorMongergings
-	g.setRumorMongeringChannel(peer, make(chan utils.StatusPacket, 10240))
+	g.setRumorMongeringChannel(peer, make(chan utils.StatusPacket, utils.GetMsgBuffer()))
 	fmt.Printf("%d: Initiating rumor mongering connection \n", time.Now().Second())
 	g.sendToPeer(gossipPacket, peer)
 
 Loop:
 	for {
-		// Make a new channel
-		timeout := make(chan bool)
-		go utils.TimeoutCounter(timeout, utils.GetRumorMongeringTimeout())
 		select {
-		case <-timeout:
+		case <-time.After(utils.GetRumorMongeringTimeout()):
 			fmt.Printf("%d: TIMEOUT\n", time.Now().Second())
 			break Loop
 		case status := <-g.getRumorMongeringChannel(peer):
@@ -225,9 +226,7 @@ Loop:
 			}
 		}
 	}
-	// Drop this rumorMongering
 	g.deleteRumorMongeringChannel(peer)
-	// Don't interrupt any ongoing process
 	return utils.FlipCoin()
 }
 
@@ -314,11 +313,6 @@ func (g *Gossiper) addToKnownMessages(msg utils.RumorMessage) {
 }
 
 func (g *Gossiper) updateNextHop(msg utils.RumorMessage, sender string) {
-	// Don't need a next hop to self
-	if msg.Origin == g.name {
-		log.Println("WHY SHOULD I UPDATE?")
-		return
-	}
 	if msg.ID > g.getNextHop(msg.Origin).HighestID {
 		g.setNextHop(msg.Origin, utils.HopInfo{Address: sender, HighestID: msg.ID})
 		fmt.Printf("DSDV %s %s\n", msg.Origin, sender)

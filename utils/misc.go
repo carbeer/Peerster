@@ -32,14 +32,6 @@ func FlipCoin() bool {
 	return false
 }
 
-func TimeoutCounter(channel chan<- bool, frequency string) {
-	duration, e := time.ParseDuration(frequency)
-	HandleError(e)
-	<-time.NewTicker(duration).C
-	channel <- true
-	close(channel)
-}
-
 func MarshalAndWrite(w http.ResponseWriter, msg interface{}) {
 	bytes, e := json.Marshal(msg)
 	HandleError(e)
@@ -51,7 +43,7 @@ func CheckDataValidity(data []byte, hash []byte) bool {
 	hashFunc.Write(data)
 	expectedHash := hex.EncodeToString(hashFunc.Sum(nil))
 	if expectedHash != hex.EncodeToString(hash) {
-		log.Printf("DATA IS CORRUPTED! Expected %s and got %s\n", expectedHash, hex.EncodeToString(hash))
+		fmt.Printf("DATA IS CORRUPTED! Expected %s and got %s\n", expectedHash, hex.EncodeToString(hash))
 		return false
 	}
 	return true

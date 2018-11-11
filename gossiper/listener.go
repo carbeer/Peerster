@@ -2,7 +2,6 @@ package gossiper
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 
@@ -12,7 +11,6 @@ import (
 
 func (g *Gossiper) ListenClientMessages(quit chan bool) {
 	for {
-		// TODO: Increase buffer
 		buffer := make([]byte, 10240)
 		n, _, e := g.ClientConn.ReadFromUDP(buffer)
 		utils.HandleError(e)
@@ -72,7 +70,7 @@ func (g *Gossiper) ClientMessageHandler(msg utils.Message) {
 				g.newPrivateMessage(msg)
 			}
 		} else {
-			log.Printf("\n\nYOUR CLIENT MESSAGE:\nDestination: %s, FileName: %s, Request: %s, Text: %s\nWHAT'S THIS SUPPOSED TO BE? NOT PROPAGATING THIS.\n\n\n", msg.Destination, msg.FileName, msg.Request, msg.Text)
+			fmt.Printf("\n\nYOUR CLIENT MESSAGE:\nDestination: %s, FileName: %s, Request: %s, Text: %s\nWHAT'S THIS SUPPOSED TO BE? NOT PROPAGATING THIS.\n\n\n", msg.Destination, msg.FileName, msg.Request, msg.Text)
 		}
 	}
 	wg.Wait()
@@ -84,23 +82,23 @@ func (g *Gossiper) peerMessageHandler(msg utils.GossipPacket, sender string) {
 		g.simpleMessageHandler(*msg.Simple)
 	} else if msg.Rumor != nil {
 		if msg.Rumor.Text == "" {
-			log.Printf("%s: Got route rumor message from %s \n", g.name, sender)
+			fmt.Printf("%s: Got route rumor message from %s \n", g.name, sender)
 		} else {
-			log.Printf("%s: Got rumor message from %s \n", g.name, sender)
+			fmt.Printf("%s: Got rumor message from %s \n", g.name, sender)
 		}
 		g.rumorMessageHandler(*msg.Rumor, sender)
 	} else if msg.Status != nil {
 		g.statusMessageHandler(*msg.Status, sender)
 	} else if msg.Private != nil {
-		log.Printf("%s: Got private message from %s \n", g.name, sender)
+		fmt.Printf("%s: Got private message from %s \n", g.name, sender)
 		g.privateMessageHandler(*msg.Private)
 	} else if msg.DataRequest != nil {
-		log.Printf("%s: Got data request from %s \n", g.name, sender)
-		g.dataRequestHandler(*msg.DataRequest)
+		fmt.Printf("%s: Got data request from %s \n", g.name, sender)
+		g.dataRequestHandler(*msg.DataRequest, sender)
 	} else if msg.DataReply != nil {
-		log.Printf("%s: Got data reply from %s \n", g.name, sender)
+		fmt.Printf("%s: Got data reply from %s \n", g.name, sender)
 		g.dataReplyHandler(*msg.DataReply)
 	} else {
-		log.Printf("\n\nWHAT'S THIS PEER MESSAGE SUPPOSED TO BE?.\n\n\n")
+		fmt.Printf("\n\nWHAT'S THIS PEER MESSAGE SUPPOSED TO BE?.\n\n\n")
 	}
 }

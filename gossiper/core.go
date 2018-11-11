@@ -11,7 +11,7 @@ import (
 
 func (g *Gossiper) sendToPeer(gossipPacket utils.GossipPacket, targetIpPort string) {
 	if targetIpPort == "" {
-		fmt.Println("No target address given. WE DON'T SEEM TO KNOW THAT PEER YET.")
+		fmt.Printf("No target address given. We don't seem to know that peer.\n")
 		return
 	}
 	if gossipPacket.Rumor != nil {

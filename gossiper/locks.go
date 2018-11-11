@@ -53,6 +53,31 @@ func (g *Gossiper) sendToRumorMongeringChannel(key string, value utils.StatusPac
 	g.rumorMongeringChannelLock.Unlock()
 }
 
+func (g *Gossiper) getDataRequestChannel(key string) chan bool {
+	g.dataRequestChannelLock.RLock()
+	val := g.dataRequestChannel[key]
+	g.dataRequestChannelLock.RUnlock()
+	return val
+}
+
+func (g *Gossiper) setDataRequestChannel(key string, value chan bool) {
+	g.dataRequestChannelLock.Lock()
+	g.dataRequestChannel[key] = value
+	g.dataRequestChannelLock.Unlock()
+}
+
+func (g *Gossiper) deleteDataRequestChannel(key string) {
+	g.dataRequestChannelLock.Lock()
+	delete(g.dataRequestChannel, key)
+	g.dataRequestChannelLock.Unlock()
+}
+
+func (g *Gossiper) sendToDataRequestChannel(key string, value bool) {
+	g.dataRequestChannelLock.Lock()
+	g.dataRequestChannel[key] <- value
+	g.dataRequestChannelLock.Unlock()
+}
+
 func (g *Gossiper) getNextHop(key string) utils.HopInfo {
 	g.nextHopLock.RLock()
 	val := g.nextHop[key]
