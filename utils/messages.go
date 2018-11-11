@@ -24,9 +24,26 @@ type PrivateMessage struct {
 	HopLimit    uint32
 }
 
+type DataRequest struct {
+	Origin      string
+	Destination string
+	HopLimit    uint32
+	HashValue   []byte
+}
+
+type DataReply struct {
+	Origin      string
+	Destination string
+	HopLimit    uint32
+	HashValue   []byte
+	Data        []byte
+}
+
 type Message struct {
 	Text        string
 	Destination string
+	FileName    string
+	Request     string
 }
 
 type PeerStatus struct {
@@ -47,11 +64,33 @@ func (sp *StatusPacket) ToString() string {
 	return s
 }
 
+type File struct {
+	FileName string
+	FileSize int64
+	MetaHash string
+}
+
+type ChunkInfo struct {
+	// Starts from 1
+	ChunkNr int
+	// Either NextHash (normal chunks) OR MetaHash (last chunk)
+	MetaHash string
+	NextHash string
+	FileName string
+}
+
+type HopInfo struct {
+	Address   string
+	HighestID uint32
+}
+
 type GossipPacket struct {
-	Simple  *SimpleMessage
-	Rumor   *RumorMessage
-	Status  *StatusPacket
-	Private *PrivateMessage
+	Simple      *SimpleMessage
+	Rumor       *RumorMessage
+	Status      *StatusPacket
+	Private     *PrivateMessage
+	DataRequest *DataRequest
+	DataReply   *DataReply
 }
 
 // Make RumorMessages sortable according to ID

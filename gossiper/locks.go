@@ -28,19 +28,6 @@ func (g *Gossiper) appendPrivateMessages(key string, value utils.PrivateMessage)
 	g.privateMessagesLock.Unlock()
 }
 
-func (g *Gossiper) getWantedMessages(key string) uint32 {
-	g.wantedMessagesLock.RLock()
-	val := g.WantedMessages[key]
-	g.wantedMessagesLock.RUnlock()
-	return val
-}
-
-func (g *Gossiper) setWantedMessages(key string, value uint32) {
-	g.wantedMessagesLock.Lock()
-	g.WantedMessages[key] = value
-	g.wantedMessagesLock.Unlock()
-}
-
 func (g *Gossiper) getRumorMongeringChannel(key string) chan utils.StatusPacket {
 	g.rumorMongeringChannelLock.RLock()
 	val := g.rumorMongeringChannel[key]
@@ -54,21 +41,74 @@ func (g *Gossiper) setRumorMongeringChannel(key string, value chan utils.StatusP
 	g.rumorMongeringChannelLock.Unlock()
 }
 
+func (g *Gossiper) deleteRumorMongeringChannel(key string) {
+	g.rumorMongeringChannelLock.Lock()
+	delete(g.rumorMongeringChannel, key)
+	g.rumorMongeringChannelLock.Unlock()
+}
+
 func (g *Gossiper) sendToRumorMongeringChannel(key string, value utils.StatusPacket) {
 	g.rumorMongeringChannelLock.Lock()
 	g.rumorMongeringChannel[key] <- value
 	g.rumorMongeringChannelLock.Unlock()
 }
 
-func (g *Gossiper) getNextHop(key string) string {
+func (g *Gossiper) getNextHop(key string) utils.HopInfo {
 	g.nextHopLock.RLock()
 	val := g.nextHop[key]
 	g.nextHopLock.RUnlock()
 	return val
 }
 
-func (g *Gossiper) setNextHop(key string, value string) {
+func (g *Gossiper) setNextHop(key string, value utils.HopInfo) {
 	g.nextHopLock.Lock()
 	g.nextHop[key] = value
 	g.nextHopLock.Unlock()
+}
+
+func (g *Gossiper) getStoredFile(key string) utils.File {
+	g.storedFilesLock.RLock()
+	val := g.storedFiles[key]
+	g.storedFilesLock.RUnlock()
+	return val
+}
+
+func (g *Gossiper) setStoredFile(key string, value utils.File) {
+	g.storedFilesLock.Lock()
+	g.storedFiles[key] = value
+	g.storedFilesLock.Unlock()
+}
+
+func (g *Gossiper) getStoredChunk(key string) []byte {
+	g.storedChunksLock.RLock()
+	val := g.storedChunks[key]
+	g.storedChunksLock.RUnlock()
+	return val
+}
+
+func (g *Gossiper) addStoredChunk(key string, value []byte) {
+	g.storedChunksLock.Lock()
+	g.storedChunks[key] = value
+	g.storedChunksLock.Unlock()
+}
+
+func (g *Gossiper) getRequestedChunks(key string) utils.ChunkInfo {
+	g.requestedChunksLock.RLock()
+	val := g.requestedChunks[key]
+	g.requestedChunksLock.RUnlock()
+	return val
+}
+
+func (g *Gossiper) addRequestedChunks(key string, value utils.ChunkInfo) {
+	g.requestedChunksLock.Lock()
+	g.requestedChunks[key] = value
+	g.requestedChunksLock.Unlock()
+}
+
+func (g *Gossiper) popRequestedChunks(key string) utils.ChunkInfo {
+	g.requestedChunksLock.Lock()
+	val := g.requestedChunks[key]
+	delete(g.requestedChunks, key)
+	g.requestedChunksLock.Unlock()
+	return val
 }
