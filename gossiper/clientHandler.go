@@ -19,6 +19,7 @@ func (g *Gossiper) newPrivateMessage(msg utils.Message) {
 	privateMessage := utils.PrivateMessage{Origin: g.name, ID: 0, Text: msg.Text, Destination: msg.Destination, HopLimit: utils.GetHopLimitConstant()}
 	gossipMessage := utils.GossipPacket{Private: &privateMessage}
 	fmt.Printf("SENDING PRIVATE MESSAGE %s TO %s\n", msg.Text, msg.Destination)
+	g.appendPrivateMessages(g.name, privateMessage)
 	g.sendToPeer(gossipMessage, g.getNextHop(msg.Destination).Address)
 }
 

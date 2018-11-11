@@ -1,38 +1,56 @@
 <html>
 <meta charset="utf-8" />
 <script src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
+
+<head>
+  <link rel="stylesheet" type="text/css" href="peerster.css">
+</head>
 <title>
   Peerster
 </title>
 
 <body>
-  <p>Your node:<label id="id" value="" \></p>
-  
-    <p>Peers:</p>
-  <textarea id="peers" rows="4" cols="50" value=""></textarea>
-  <p> Add a peer</o>
-  <p>
-    <input id="peer" type="text" value="ip:port">
-  </p>
-  <button id="addNewPeer">Add Peer</button>
-  
-  <p>Known origin nodes:</p>
-  <textarea id="origins" rows="4" cols="50" value=""></textarea>
-  
-  <p>Messages:</p>
-  <input id="message" type="text" value="Your message...">
-  <button id="sendMessage">Send Message</button>
-  
-  <p>Upload a file:</p>
-  <form id="fileForm" enctype="multipart/form-data" method="post" name="fileinfo">
-    <input type="file" name="Share file..." required />
-  </form> 
-  <input id="uploadButton" type="button" value="Save">
+  <h1>Welcome to Peerster!</h1>
+  <h3>ID of your Peerster node: <label id="id" value=""></label></h3>
 
-  <p>
-    Chatbox
-  </p>
-  <textarea id="chat" rows="4" cols="50" value=""></textarea>
+  <h2>Peers:</h2>
+  <h3>Direct peers:</h3>
+  <textarea id="peers" rows="4" cols="50" value=""></textarea>
+  <h3>Add a peer</h3>
+  <input id="peer" type="text" value="ip:port">
+  <button id="addNewPeer">Add Peer</button>
+
+  <h2>Public messages:</p>
+    <textarea id="chat" rows="4" cols="50" value="" overflow-y: scroll;></textarea><br>
+    <input id="message" type="text" value="Your message...">
+    <button id="sendMessage">Send Message</button>
+
+    <h2>Private messages</h2>
+    <h3>Known origin nodes:</h3>
+    <select class="selectOrigin" id="privateMessageOrigin" size=5>
+    </select>
+
+    <div id="privateMessageDialog" style="display: none">
+      <p> Private dialog with peer <label id='privateMessagePeer' value=''></label></p><br>
+      <textarea id='privateChat' rows='4' cols='50' value='' overflow-y: scroll;></textarea>
+      <br>
+      <input id='privateMessage' type='text' value='Your message...'>
+      <button id='sendPrivateMessage'>Send Private Message</button>
+    </div>
+    <h2>File handling</h2>
+    <h3>Index a file:</h3>
+    <form id="fileForm" enctype="multipart/form-data" method="post" name="fileinfo">
+      <input type="file" name="Share file..." outline=none required />
+    </form>
+    <input id="uploadButton" type="button" value="Request indexing">
+    <h3>Download a file:</h3>
+    <select class="selectOrigin" id="downloadOrigin" required>
+    </select>
+    <input id='fileName' type='text' value='Desired file name...' required>
+    <input id='downloadHash' type='text' value='Insert the meta hash...' required><br>
+    <button id='sendDownloadRequest'>Request download</button>
+
+
 </body>
 <script src="js/server.js" type="text/javascript"></script>
 

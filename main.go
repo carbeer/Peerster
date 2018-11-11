@@ -54,6 +54,7 @@ func main() {
 	}
 
 	if rtimer != 0 {
+		fmt.Printf("Starting route rumors with frequency %d", rtimer)
 		go g.RouteRumor(strconv.Itoa(rtimer) + "s")
 	}
 

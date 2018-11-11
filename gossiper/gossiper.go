@@ -5,13 +5,11 @@ import (
 	"log"
 	"math/rand"
 	"net"
-	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/carbeer/Peerster/utils"
-	"github.com/dedis/protobuf"
 )
 
 type Gossiper struct {
@@ -81,15 +79,6 @@ func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []stri
 	}
 }
 
-func (g *Gossiper) addPeerToListIfApplicable(adr string) {
-	for i := range g.peers {
-		if g.peers[i] == adr {
-			return
-		}
-	}
-	g.peers = append(g.peers, adr)
-}
-
 func (g *Gossiper) simpleMessageHandler(msg utils.SimpleMessage) {
 	fmt.Printf("SIMPLE MESSAGE origin %s from %s contents %s\n", msg.OriginalName, msg.RelayPeerAddr, msg.Contents)
 	fmt.Printf("PEERS %v\n", fmt.Sprint(strings.Join(g.peers, ",")))
@@ -122,6 +111,7 @@ func (g *Gossiper) rumorMessageHandler(msg utils.RumorMessage, sender string) {
 			wg.Done()
 		}()
 	}
+	fmt.Println("Sending ack because of new message received")
 	g.sendAcknowledgement(sender)
 	wg.Wait()
 }
@@ -257,57 +247,6 @@ func (g *Gossiper) compareStatus(peer string, status utils.StatusPacket) bool {
 	return true
 }
 
-func (g *Gossiper) generateStatusPacket() utils.StatusPacket {
-	packet := utils.StatusPacket{}
-	g.receivedMessagesLock.RLock()
-	for k, v := range g.ReceivedMessages {
-		peer := utils.PeerStatus{Identifier: k, NextID: uint32(len(v) + 1)}
-		packet.Want = append(packet.Want, peer)
-	}
-	g.receivedMessagesLock.RUnlock()
-	return packet
-}
-
-func (g *Gossiper) sendAcknowledgement(adr string) {
-	statusPacket := g.generateStatusPacket()
-	gossipPacket := utils.GossipPacket{Status: &statusPacket}
-	g.sendToPeer(gossipPacket, adr)
-}
-
-func (g *Gossiper) sendToPeer(gossipPacket utils.GossipPacket, targetIpPort string) {
-	if gossipPacket.Rumor != nil {
-		if gossipPacket.Rumor.Text != "" {
-			fmt.Printf("MONGERING with %s\n", targetIpPort)
-		} else {
-			fmt.Printf("ROUTE MONGERING with %s\n", targetIpPort)
-			log.Printf("You're not supposed to route monger!")
-			log.Println(debug.Stack())
-		}
-	}
-	byteStream, e := protobuf.Encode(&gossipPacket)
-	utils.HandleError(e)
-	adr, e := net.ResolveUDPAddr("udp4", targetIpPort)
-	utils.HandleError(e)
-	_, e = g.udpConn.WriteToUDP(byteStream, adr)
-	utils.HandleError(e)
-}
-
-func (g *Gossiper) broadcastMessage(packet utils.GossipPacket, receivedFrom string) {
-	var wg sync.WaitGroup
-	// Broadcast to everyone except originPeer
-	for _, p := range g.peers {
-		if p != receivedFrom {
-			wg.Add(1)
-			go func(p string) {
-				// fmt.Printf("%d: Broadcasting\n", time.Now().Second())
-				g.sendToPeer(packet, p)
-				wg.Done()
-			}(p)
-		}
-	}
-	wg.Wait()
-}
-
 // Checks whether this gossiper could get additional messages from the peer that sent the status packet
 func (g *Gossiper) HasLessMessagesThan(status utils.StatusPacket) bool {
 	for i := range status.Want {
@@ -341,6 +280,23 @@ Loop:
 	return false, utils.RumorMessage{}
 }
 
+func (g *Gossiper) generateStatusPacket() utils.StatusPacket {
+	packet := utils.StatusPacket{}
+	g.receivedMessagesLock.RLock()
+	for k, v := range g.ReceivedMessages {
+		peer := utils.PeerStatus{Identifier: k, NextID: uint32(len(v) + 1)}
+		packet.Want = append(packet.Want, peer)
+	}
+	g.receivedMessagesLock.RUnlock()
+	return packet
+}
+
+func (g *Gossiper) sendAcknowledgement(adr string) {
+	statusPacket := g.generateStatusPacket()
+	gossipPacket := utils.GossipPacket{Status: &statusPacket}
+	g.sendToPeer(gossipPacket, adr)
+}
+
 func (g *Gossiper) pickRandomPeerForMongering(origin string) string {
 	peer := ""
 	for {
@@ -358,6 +314,11 @@ func (g *Gossiper) addToKnownMessages(msg utils.RumorMessage) {
 }
 
 func (g *Gossiper) updateNextHop(msg utils.RumorMessage, sender string) {
+	// Don't need a next hop to self
+	if msg.Origin == g.name {
+		log.Println("WHY SHOULD I UPDATE?")
+		return
+	}
 	if msg.ID > g.getNextHop(msg.Origin).HighestID {
 		g.setNextHop(msg.Origin, utils.HopInfo{Address: sender, HighestID: msg.ID})
 		fmt.Printf("DSDV %s %s\n", msg.Origin, sender)

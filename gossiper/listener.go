@@ -72,7 +72,7 @@ func (g *Gossiper) ClientMessageHandler(msg utils.Message) {
 				g.newPrivateMessage(msg)
 			}
 		} else {
-			log.Printf("\n\nYOUR CLIENT MESSAGE:\nDestination: %s, FileName: %s, Request: %s, Text: %s\n\nWHAT'S THIS SUPPOSED TO BE?\n\n\n", msg.Destination, msg.FileName, msg.Request, msg.Text)
+			log.Printf("\n\nYOUR CLIENT MESSAGE:\nDestination: %s, FileName: %s, Request: %s, Text: %s\nWHAT'S THIS SUPPOSED TO BE? NOT PROPAGATING THIS.\n\n\n", msg.Destination, msg.FileName, msg.Request, msg.Text)
 		}
 	}
 	wg.Wait()

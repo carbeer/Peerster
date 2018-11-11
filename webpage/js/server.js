@@ -8,14 +8,28 @@ $(document).ready(function () {
     sendMessage();
   });
 
+  $("#sendPrivateMessage").on("click", function () {
+    sendPrivateMessage();
+  });
+
   $("#addNewPeer").on("click", function () {
     addPeer();
   });
 
-  $('#uploadButton').on('click', function(){ 
+  $('#uploadButton').on('click', function () {
     saveFile();
   });
+
+  $('#privateMessageOrigin').on("dblclick", "option", function () {
+    openPrivateDialog($('#privateMessageOrigin option:selected').val());
+  });
+
+  $('#sendDownloadRequest').on('click', function () {
+    sendDownloadRequest();
+  })
 });
+
+var privateMessagePeer = ""
 
 function fetchId() {
   $.ajax({
@@ -23,7 +37,7 @@ function fetchId() {
     type: "GET",
     success: function (data) {
       id = JSON.parse(data)
-      $("#id").val(id);
+      $("#id").append(id);
     },
   });
 }
@@ -49,8 +63,21 @@ function getMessages() {
       $('#chat').val(messages);
     },
     complete: function () {
-      // Schedule the next request when the current one's complete
       setTimeout(getMessages, 5000);
+    }
+  });
+}
+
+function getPrivateMessages() {
+  $.ajax({
+    url: '/privateMessage?peer=' + privateMessagePeer,
+    type: "GET",
+    success: function (data) {
+      messages = JSON.parse(data);
+      $('#privateChat').val(messages);
+    },
+    complete: function () {
+      setTimeout(getPrivateMessages, 5000);
     }
   });
 }
@@ -69,6 +96,7 @@ function addPeer() {
 
 function getPeers() {
   $.ajax({
+    async: false,
     url: "/node",
     type: "GET",
     success: function (data) {
@@ -80,20 +108,80 @@ function getPeers() {
 
 function getKnownOrigins() {
   $.ajax({
+    async: false,
     url: "/origins",
     type: "GET",
     success: function (data) {
-      origins = JSON.parse(origins)
-      $("#origins").val(id);
+      origin = JSON.parse(data).split("\n")
+      $('.selectOrigin').each(function () {
+        $(this).empty()
+        origin.forEach(elem => {
+          if (elem != "") {
+            $(this).append($('<option>', {
+              id: elem,
+              value: elem,
+              text: elem
+            }));
+          }
+        });
+      });
     },
+    complete: function () {
+      setTimeout(getKnownOrigins, 5000);
+    }
   });
 }
 
 function saveFile() {
-  var fileName = $('#fileForm').val().split('\\').pop();
+  var fileName = $('input[type=file]').val().split('\\').pop();
   $.ajax({
-      url: '/file',  
-      type: 'POST',
-      data: { filename: fileName }
+    async: false,
+    url: '/file',
+    type: 'POST',
+    data: { filename: fileName },
+    success: function (data) {
+      $('input[type=file]').val('');
+    }
   });
+}
+
+function sendPrivateMessage() {
+  $.ajax({
+    async: false,
+    url: "/privateMessage",
+    type: "POST",
+    data: {
+      message: $("#privateMessage").val(),
+      destination: this.privateMessagePeer,
+    },
+    success: function (data) {
+      console.log($("#privateMessage").val());
+      $("#privateMessage").val("Type your message here...");
+    },
+  });
+  getPrivateMessages();
+}
+
+function sendDownloadRequest() {
+  $.ajax({
+    async: false,
+    url: "/download",
+    type: "POST",
+    data: {
+      destination: $('#downloadOrigin option:selected').val(),
+      request: $("#downloadHash").val(),
+      filename: $('#fileName').val(),
+    },
+    success: function (data) {
+      $('#fileName').val('Desired file name...');
+      $("#downloadHash").val('Insert the meta hash...');
+    }
+  });
+}
+
+function openPrivateDialog(origin) {
+  this.privateMessagePeer = origin;
+  $('#privateMessagePeer').empty().append(origin)
+  document.getElementById("privateMessageDialog").style.display = "block";
+  getPrivateMessages();
 }

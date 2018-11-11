@@ -36,9 +36,8 @@ func (g *Gossiper) indexFile(msg utils.Message) {
 	}
 	file.Close()
 
-	if len(chunkHashed) > 8196 {
-		fmt.Printf("Can't index file %s as it's metafile is larger than 8KB\n", msg.FileName)
-		log.Printf("Can't index file %s as it's metafile is larger than 8KB\n", msg.FileName)
+	if len(chunkHashed) > utils.GetChunkSize() {
+		log.Printf("CAN'T INDEX FILE %s: METAFILE LARGER THAN ALLOWED\n", msg.FileName)
 		return
 	}
 
@@ -46,15 +45,14 @@ func (g *Gossiper) indexFile(msg utils.Message) {
 	hashFunc.Write(chunkHashed)
 	metaHash := hex.EncodeToString(hashFunc.Sum(nil))
 	g.addStoredChunk(metaHash, chunkHashed)
-	log.Println("Indexed File with Metahash", metaHash)
+	fmt.Println("Indexed File with Metahash", metaHash)
 	g.setStoredFile(hex.EncodeToString(hashFunc.Sum(nil)), utils.File{FileName: msg.FileName, MetaHash: metaHash, FileSize: fileSize})
 }
 
 func (g *Gossiper) newDataReplyMessage(msg utils.DataRequest) {
 	dataReplyMessage := utils.DataReply{Origin: g.name, Destination: msg.Origin, HopLimit: utils.GetHopLimitConstant(), HashValue: msg.HashValue, Data: g.getStoredChunk(hex.EncodeToString(msg.HashValue))}
 	gossipMessage := utils.GossipPacket{DataReply: &dataReplyMessage}
-	fmt.Printf("SENDING DATA REPLY %s TO %s\n", hex.EncodeToString(dataReplyMessage.HashValue), dataReplyMessage.Destination)
-	log.Printf("Sending data reply %s to %s via %s\n", hex.EncodeToString(dataReplyMessage.HashValue), dataReplyMessage.Destination, g.getNextHop(dataReplyMessage.Destination).Address)
+	fmt.Printf("Sending data reply %s to %s via %s\n", hex.EncodeToString(dataReplyMessage.HashValue), dataReplyMessage.Destination, g.getNextHop(dataReplyMessage.Destination).Address)
 	g.sendToPeer(gossipMessage, g.getNextHop(dataReplyMessage.Destination).Address)
 }
 
@@ -63,7 +61,7 @@ func (g *Gossiper) receiveDataReply(msg utils.DataReply) {
 	reqChunk := g.getRequestedChunks(stringHashValue)
 	// Chunk was not requested
 	if reqChunk.FileName == "" {
-		log.Printf("Chunk %s was not requested\n", stringHashValue)
+		fmt.Printf("CHUNK %s was not requested\n", stringHashValue)
 		return
 	}
 	// Corrupted data
@@ -97,11 +95,9 @@ func (g *Gossiper) onMetaFileReception(metaFile []byte, hashValue []byte) {
 		}
 		chunk := hex.EncodeToString(temp)
 		g.addRequestedChunks(prevChunk, utils.ChunkInfo{ChunkNr: counter + 1, NextHash: chunk, FileName: file.FileName})
-		log.Println("Stored chunk request with hash after ", chunk, prevChunk)
 		prevChunk = chunk
 		counter = counter + 1
 	}
-	log.Println("Done with handling the meta file")
 	// Last element is metaHash
 	g.addRequestedChunks(prevChunk, utils.ChunkInfo{ChunkNr: counter, MetaHash: hex.EncodeToString(hashValue), FileName: file.FileName})
 }
@@ -111,7 +107,6 @@ func (g *Gossiper) reconstructFile(metaHash string) {
 	utils.HandleError(e)
 	defer file.Close()
 	metaFile := g.getStoredChunk(metaHash)
-
 	counter := 0
 	for {
 		temp := utils.GetHashAtIndex(metaFile, counter)
@@ -122,13 +117,11 @@ func (g *Gossiper) reconstructFile(metaHash string) {
 		file.Write(bytes.Trim(g.getStoredChunk(hex.EncodeToString(temp)), "\x00"))
 		counter = counter + 1
 	}
-
 	storedFile := g.getStoredFile(metaHash)
 	fileInfo, e := file.Stat()
 	utils.HandleError(e)
 	storedFile.FileSize = fileInfo.Size()
 	g.setStoredFile(metaHash, storedFile)
 
-	log.Printf("RECONSTRUCTED file %s\n", storedFile.FileName)
 	fmt.Printf("RECONSTRUCTED file %s\n", storedFile.FileName)
 }
