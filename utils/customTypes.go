@@ -40,10 +40,13 @@ type DataReply struct {
 }
 
 type Message struct {
-	Text        string
-	Destination string
-	FileName    string
-	Request     string
+	Text        string   `json:"text"`
+	Destination string   `json:"destination"`
+	FileName    string   `json:"filename"`
+	Request     string   `json:"request"`
+	Keywords    []string `json:"keywords"`
+	Budget      uint32   `json:"budget"`
+	Peer        string   `json:"peer"`
 }
 
 type PeerStatus struct {
@@ -54,6 +57,25 @@ type PeerStatus struct {
 
 type StatusPacket struct {
 	Want []PeerStatus
+}
+
+type SearchRequest struct {
+	Origin   string
+	Budget   uint64
+	Keywords []string
+}
+
+type SearchReply struct {
+	Origin      string
+	Destination string
+	HopLimit    uint32
+	Results     []*SearchResult
+}
+
+type SearchResult struct {
+	FileName     string
+	MetafileHash []byte
+	ChunkMap     []uint64
 }
 
 func (sp *StatusPacket) ToString() string {
@@ -85,14 +107,17 @@ type HopInfo struct {
 }
 
 type GossipPacket struct {
-	Simple      *SimpleMessage
-	Rumor       *RumorMessage
-	Status      *StatusPacket
-	Private     *PrivateMessage
-	DataRequest *DataRequest
-	DataReply   *DataReply
+	Simple        *SimpleMessage
+	Rumor         *RumorMessage
+	Status        *StatusPacket
+	Private       *PrivateMessage
+	DataRequest   *DataRequest
+	DataReply     *DataReply
+	SearchRequest *SearchRequest
+	SearchReply   *SearchReply
 }
 
+/*
 // Make RumorMessages sortable according to ID
 type RumorMessages []RumorMessage
 
@@ -122,3 +147,4 @@ func (rm1 RumorMessage) CompareRumorMessage(rm2 RumorMessage) bool {
 	}
 	return true
 }
+*/

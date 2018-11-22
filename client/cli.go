@@ -15,6 +15,8 @@ var msg string
 var dest string
 var file string
 var request string
+var keywords string
+var budget int
 
 func main() {
 	flag.IntVar(&uiPort, "UIPort", 8080, "port for the UI client")
@@ -22,6 +24,8 @@ func main() {
 	flag.StringVar(&dest, "dest", "", "destination for the private message")
 	flag.StringVar(&file, "file", "", "file to be indexed by the gossiper")
 	flag.StringVar(&request, "request", "", "request a chunk or metafile of this hash")
+	flag.StringVar(&keywords, "keywords", "", "comma separated list of keywords")
+	flag.IntVar(&budget, "budget", 2, "budget for keyword search")
 	flag.Parse()
 
 	/*
@@ -40,10 +44,12 @@ func main() {
 			log.Println("Sending file indexing request")
 			SendMessage(utils.Message{FileName: file}, uiPort)
 		}
-	}
-	if msg != "" && dest != "" {
+	} else if msg != "" && dest != "" {
 		log.Println("Sending private message")
 		SendMessage(utils.Message{Text: msg, Destination: dest}, uiPort)
+	} else if {
+		log.Println("Sending search request")
+		SendMessage(utils.Message{Keywords: keywords.split(","), Budget: budget})
 	} else {
 		log.Println("Sending normal message")
 		SendMessage(utils.Message{Text: msg}, uiPort)

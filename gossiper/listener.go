@@ -66,9 +66,13 @@ func (g *Gossiper) ClientMessageHandler(msg utils.Message) {
 		} else if msg.Text != "" {
 			if msg.Destination == "" {
 				g.newRumorMongeringMessage(msg)
+			} else if len(msg.Keywords) > 0 {
+				g.newSearchRequest(msg)
 			} else {
 				g.newPrivateMessage(msg)
 			}
+		} else if msg.Peer != "" {
+			g.addPeerToListIfApplicable(msg.Peer)
 		} else {
 			fmt.Printf("\n\nYOUR CLIENT MESSAGE:\nDestination: %s, FileName: %s, Request: %s, Text: %s\nWHAT'S THIS SUPPOSED TO BE? NOT PROPAGATING THIS.\n\n\n", msg.Destination, msg.FileName, msg.Request, msg.Text)
 		}

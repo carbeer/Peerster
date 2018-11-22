@@ -43,10 +43,14 @@ function fetchId() {
 }
 
 function sendMessage() {
+  msg = new Message($("#message").val(), undefined, undefined, undefined, undefined, undefined, undefined);
+  console.log(JSON.stringify(msg));
+
   $.ajax({
     url: "/message",
     type: "POST",
-    data: { message: $("#message").val() },
+    data: JSON.stringify(msg),
+    contentType: "application/json",
     success: function (data) {
       $("#message").val("Type your message here...");
     },
@@ -85,10 +89,12 @@ function getPrivateMessages() {
 }
 
 function addPeer() {
+  msg = new Message(undefined, undefined, undefined, undefined, undefined, undefined, $("#peer").val());
+
   $.ajax({
     url: "/node",
     type: "POST",
-    data: { peer: $("#peer").val() },
+    data: JSON.stringify(msg),
     success: function (data) {
       $("#peer").val("Type the peer here...");
     },
@@ -109,6 +115,7 @@ function getPeers() {
 }
 
 function getKnownOrigins() {
+
   $.ajax({
     async: false,
     url: "/origins",
@@ -135,12 +142,12 @@ function getKnownOrigins() {
 }
 
 function saveFile() {
-  var fileName = $('input[type=file]').val().split('\\').pop();
+  msg = new Message(undefined, undefined, $('input[type=file]').val().split('\\').pop(), undefined, undefined, undefined);
   $.ajax({
     async: false,
     url: '/file',
     type: 'POST',
-    data: { filename: fileName },
+    data: JSON.stringify(msg),
     success: function (data) {
       $('input[type=file]').val('');
     }
@@ -148,16 +155,14 @@ function saveFile() {
 }
 
 function sendPrivateMessage() {
+  msg = new Message($("#privateMessage").val(), this.privateMessagePeer, undefined, undefined, undefined, undefined);
+
   $.ajax({
     async: false,
     url: "/privateMessage",
     type: "POST",
-    data: {
-      message: $("#privateMessage").val(),
-      destination: this.privateMessagePeer,
-    },
+    data: JSON.stringify(msg),
     success: function (data) {
-      console.log($("#privateMessage").val());
       $("#privateMessage").val("Type your message here...");
     },
   });
@@ -165,15 +170,13 @@ function sendPrivateMessage() {
 }
 
 function sendDownloadRequest() {
+  msg = new Message(undefined, $('#downloadOrigin option:selected').val(), $('#fileName').val(), $("#downloadHash").val(), undefined, undefined);
+
   $.ajax({
     async: false,
     url: "/download",
     type: "POST",
-    data: {
-      destination: $('#downloadOrigin option:selected').val(),
-      request: $("#downloadHash").val(),
-      filename: $('#fileName').val(),
-    },
+    data: JSON.stringify(msg),
     success: function (data) {
       $('#fileName').val('Desired file name...');
       $("#downloadHash").val('Insert the meta hash...');
@@ -188,9 +191,6 @@ function openPrivateDialog(origin) {
   getPrivateMessages();
 }
 
-Array.prototype.diff = function(a) {
-  return this.filter(function(i) {return a.indexOf(i) < 0;});
-};
 
 function orderKnownMessages(newMessages, orderedMessages) {
   if (orderedMessages == null) {
@@ -207,3 +207,18 @@ function orderKnownMessages(newMessages, orderedMessages) {
   return orderedMessages;
 }
 
+Array.prototype.diff = function(a) {
+  return this.filter(function(i) {return a.indexOf(i) < 0;});
+};
+
+class Message {
+  constructor(text, destination, filename, request, keywords, budget, peer) {
+      this.text = text;
+      this.destination = destination;
+      this.filename = filename;
+      this.request = request;
+      this.keywords = keywords;
+      this.budget = budget;
+      this.peer = peer;
+  }
+}

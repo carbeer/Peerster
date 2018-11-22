@@ -1,0 +1,7 @@
+input:required:invalid {
+    outline: none;
+}
+
+.selectOrigin {
+    width: 200px;
+}

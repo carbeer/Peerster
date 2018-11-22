@@ -1,6 +1,7 @@
 package gossiper
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -64,12 +65,18 @@ func (g *Gossiper) GetAllOrigins() string {
 	return allOrigins
 }
 
+func (g *Gossiper) unmarshalAndForward(r *http.Request) {
+	var msg utils.Message
+	e := json.NewDecoder(r.Body).Decode(&msg)
+	utils.HandleError(e)
+	g.ClientMessageHandler(msg)
+}
+
 // Handler functions
 func (g *Gossiper) handlePeer(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
-		peer := r.FormValue("peer")
-		g.addPeerToListIfApplicable(peer)
+		g.unmarshalAndForward(r)
 		utils.MarshalAndWrite(w, http.StatusOK)
 		break
 	case http.MethodGet:
@@ -84,8 +91,7 @@ func (g *Gossiper) handlePeer(w http.ResponseWriter, r *http.Request) {
 func (g *Gossiper) handleMessage(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
-		message := r.FormValue("message")
-		g.ClientMessageHandler(utils.Message{Text: message})
+		g.unmarshalAndForward(r)
 		utils.MarshalAndWrite(w, http.StatusOK)
 		break
 	case http.MethodGet:
@@ -99,9 +105,7 @@ func (g *Gossiper) handleMessage(w http.ResponseWriter, r *http.Request) {
 func (g *Gossiper) handlePrivateMessage(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
-		message := r.FormValue("message")
-		dest := r.FormValue("destination")
-		g.ClientMessageHandler(utils.Message{Text: message, Destination: dest})
+		g.unmarshalAndForward(r)
 		utils.MarshalAndWrite(w, http.StatusOK)
 		break
 	case http.MethodGet:
@@ -124,8 +128,7 @@ func (g *Gossiper) handleId(w http.ResponseWriter, r *http.Request) {
 func (g *Gossiper) handleFile(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
-		fileName := r.FormValue("filename")
-		g.indexFile(utils.Message{FileName: fileName})
+		g.unmarshalAndForward(r)
 		utils.MarshalAndWrite(w, http.StatusOK)
 		break
 	default:
@@ -146,15 +149,16 @@ func (g *Gossiper) handleGetOrigin(w http.ResponseWriter, r *http.Request) {
 func (g *Gossiper) handleDownload(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
-		destination := r.FormValue("destination")
-		request := r.FormValue("request")
-		filename := r.FormValue("filename")
-		g.ClientMessageHandler(utils.Message{Request: request, FileName: filename, Destination: destination})
+		g.unmarshalAndForward(r)
 		utils.MarshalAndWrite(w, http.StatusOK)
 		break
 	default:
 		utils.MarshalAndWrite(w, http.StatusMethodNotAllowed)
 	}
+}
+
+func serveFavicon(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "webpage/favicon.ico")
 }
 
 func (g *Gossiper) BootstrapUI() {
@@ -168,7 +172,10 @@ func (g *Gossiper) BootstrapUI() {
 	r.HandleFunc("/origins", g.handleGetOrigin).Methods("GET")
 	r.HandleFunc("/file", g.handleFile).Methods("POST")
 	r.HandleFunc("/download", g.handleDownload).Methods("POST")
-	r.Handle("/", http.FileServer(http.Dir("webpage"))).Methods("GET")
+	r.HandleFunc("/favicon.ico", serveFavicon)
+	r.Handle("/", http.FileServer(http.Dir("webpage/"))).Methods("GET")
 	r.PathPrefix("/js/").Handler(http.StripPrefix("/js/", http.FileServer(http.Dir("webpage/js/"))))
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("webpage/static/"))))
+
 	utils.HandleError(http.ListenAndServe(fmt.Sprintf("%s:%s", utils.GetClientIp(), utils.GetUIPort()), r))
 }

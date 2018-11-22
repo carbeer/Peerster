@@ -2,7 +2,7 @@ package gossiper
 
 import "github.com/carbeer/Peerster/utils"
 
-func (g *Gossiper) getReceivedMessages(key string) utils.RumorMessages {
+func (g *Gossiper) getReceivedMessages(key string) []utils.RumorMessage {
 	g.receivedMessagesLock.RLock()
 	val := g.ReceivedMessages[key]
 	g.receivedMessagesLock.RUnlock()

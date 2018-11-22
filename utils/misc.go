@@ -1,12 +1,9 @@
 package utils
 
 import (
-	"crypto"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"math/rand"
 	"net/http"
 	"os"
@@ -18,17 +15,15 @@ func HandleError(e error) {
 	if e != nil {
 		fmt.Println("General error ", e)
 		debug.PrintStack()
-		// log.Fatal("General error ", e)
 	}
 }
 
+// Returns boolean value whether Peerster should continue rumormongering with a new peer
 func FlipCoin() bool {
 	newRand := rand.New(rand.NewSource(time.Now().UnixNano())).Intn(2)
 	if newRand == 0 {
-		// Continue rumormongering
 		return true
 	}
-	// Stop rumermongering
 	return false
 }
 
@@ -38,17 +33,6 @@ func MarshalAndWrite(w http.ResponseWriter, msg interface{}) {
 	w.Write(bytes)
 }
 
-func CheckDataValidity(data []byte, hash []byte) bool {
-	var hashFunc = crypto.SHA256.New()
-	hashFunc.Write(data)
-	expectedHash := hex.EncodeToString(hashFunc.Sum(nil))
-	if expectedHash != hex.EncodeToString(hash) {
-		fmt.Printf("DATA IS CORRUPTED! Expected %s and got %s\n", expectedHash, hex.EncodeToString(hash))
-		return false
-	}
-	return true
-}
-
 func GetNextDataChunk(file *os.File, step int) []byte {
 	bytes := make([]byte, step)
 	_, e := file.Read(bytes)
@@ -56,12 +40,13 @@ func GetNextDataChunk(file *os.File, step int) []byte {
 		if e == io.EOF {
 			return nil
 		}
-		log.Fatal("Error in next data chunk ", e)
+		fmt.Println("Error in next data chunk ", e)
 		debug.PrintStack()
 	}
 	return bytes
 }
 
+// Returns hash no. index of the metafile
 func GetHashAtIndex(metaFile []byte, index int) []byte {
 	begin := 32 * (index)
 	end := begin + 32
