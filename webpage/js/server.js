@@ -44,8 +44,7 @@ function fetchId() {
 
 function sendMessage() {
   msg = new Message($("#message").val(), undefined, undefined, undefined, undefined, undefined, undefined);
-  console.log(JSON.stringify(msg));
-
+  
   $.ajax({
     url: "/message",
     type: "POST",
@@ -122,7 +121,7 @@ function getKnownOrigins() {
     type: "GET",
     success: function (data) {
       origin = JSON.parse(data).split("\n")
-      $('.selectOrigin').each(function () {
+      $('.custom-select').each(function () {
         $(this).empty()
         origin.forEach(elem => {
           if (elem != "") {

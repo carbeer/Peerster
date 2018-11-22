@@ -5,3 +5,11 @@ input:required:invalid {
 .selectOrigin {
     width: 200px;
 }
+
+.card {
+    margin-bottom: 2rem
+}
+
+.card-section {
+    margin-bottom: 1rem
+}

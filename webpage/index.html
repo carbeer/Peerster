@@ -1,8 +1,14 @@
 <html>
 <meta charset="utf-8" />
-<script src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.2.1.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+  crossorigin="anonymous"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+  crossorigin="anonymous"></script>
 
 <head>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
+    crossorigin="anonymous">
   <link rel="stylesheet" type="text/css" href="static/peerster.css">
 </head>
 <title>
@@ -10,47 +16,119 @@
 </title>
 
 <body>
-  <h1>Welcome to Peerster!</h1>
-  <h3>ID of your Peerster node: <label id="id" value=""></label></h3>
-
-  <h2>Peers:</h2>
-  <h3>Direct peers:</h3>
-  <textarea id="peers" rows="4" cols="50" value=""></textarea>
-  <h3>Add a peer</h3>
-  <input id="peer" type="text" value="ip:port">
-  <button id="addNewPeer">Add Peer</button>
-
-  <h2>Public messages:</p>
-    <textarea id="chat" rows="4" cols="50" value="" overflow-y: scroll;></textarea><br>
-    <input id="message" type="text" value="Your message...">
-    <button id="sendMessage">Send Message</button>
-
-    <h2>Private messages</h2>
-    <h3>Known origin nodes:</h3>
-    <select class="selectOrigin" id="privateMessageOrigin" size=5>
-    </select>
-
-    <div id="privateMessageDialog" style="display: none">
-      <p> Private dialog with peer <label id='privateMessagePeer' value=''></label></p><br>
-      <textarea id='privateChat' rows='4' cols='50' value='' overflow-y: scroll;></textarea>
-      <br>
-      <input id='privateMessage' type='text' value='Your message...'>
-      <button id='sendPrivateMessage'>Send Private Message</button>
+  <div class="container">
+    <p>
+      <h1>Welcome to Peerster!</h1>
+    </p>
+    <p>
+      <div class="alert alert-success" role="alert">
+        ID of your Peerster node: <label id="id" value=""></label>
+      </div>
+    </p>
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Peers</h3>
+      </div>
+      <div class="card-body">
+        <div class="form-group">
+          <label for="peers">Direct peers</label>
+          <textarea id="peers" class="form-control" rows="4" overflow-y: scroll;></textarea>
+        </div>
+        <label>Add a peer</label>
+        <div class="input-group mb-3">
+          <input id="peer" class="form-control" type="text" placeholder="ip:port" aria-label="ip:port">
+          <div class="input-group-append">
+            <button id="addNewPeer" type="button" class="btn btn-outline-secondary">Add Peer</button>
+          </div>
+        </div>
+      </div>
     </div>
-    <h2>File handling</h2>
-    <h3>Index a file:</h3>
-    <form id="fileForm" enctype="multipart/form-data" method="post" name="fileinfo">
-      <input type="file" name="Share file..." outline=none required />
-    </form>
-    <input id="uploadButton" type="button" value="Request indexing">
-    <h3>Download a file:</h3>
-    <select class="selectOrigin" id="downloadOrigin" required>
-    </select>
-    <input id='fileName' type='text' value='Desired file name...' required>
-    <input id='downloadHash' type='text' value='Insert the meta hash...' required><br>
-    <button id='sendDownloadRequest'>Request download</button>
 
 
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Public messages</h3>
+      </div>
+      <div class="card-body">
+        <div class="form-group">
+          <textarea id="chat" class="form-control" rows="4" overflow-y: scroll;></textarea>
+        </div>
+        <div class="input-group mb-3">
+          <input id='message' class="form-control" type='text' placeholder='Your message...' aria-label="Your message...">
+          <div class="input-group-append">
+            <button id="sendMessage" type="button" class="btn btn-outline-secondary">Send Message</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Private messages</h3>
+      </div>
+      <div class="card-body">
+        <label for="privateMessageOrigin">Known origin nodes</label>
+        <div class="input-group mb-3">
+          <div class="input-group-prepend">
+            <label class="input-group-text" for="privateMessageOrigin">Peers</label>
+          </div>
+          <select class="custom-select" id="privateMessageOrigin" size=5>
+          </select>
+        </div>
+        <div id="privateMessageDialog" style="display: none">
+          <p> Private dialog with peer <label id='privateMessagePeer' value=''></label></p><br>
+          <textarea id='privateChat' rows='4' cols='50' value='' overflow-y: scroll;></textarea>
+          <br>
+          <div class="input-group mb-3">
+            <input id='privateMessage' class="form-control" type='text' placeholder='Your message...' aria-label="Your message...">
+            <div class="input-group-append">
+              <button id="sendPrivateMessage" type="button" class="btn btn-outline-secondary">Send Private Message</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">File handling</h3>
+      </div>
+      <div class="card-body">
+        <div class="card-section">
+          <label for="fileForm">Index a file</label>
+          <div class="input-group">
+            <div class="custom-file">
+              <input id="fileForm" type="file" class="form-control" name="Share file..." class="custom-file-input"
+                outline=none required />
+              <label class="custom-file-label" for="fileForm">Choose file</label>
+            </div>
+            <div class="input-group-append">
+              <button id="uploadButton" class="btn btn-outline-secondary" type="button">Request indexing</button>
+            </div>
+          </div>
+        </div>
+        <div class="card-section">
+          <label for="downloadOrigin">Download a file</label>
+          <div class="input-group mb-3">
+            <div class="input-group-prepend">
+              <label class="input-group-text" for="downloadOrigin">Peers</label>
+            </div>
+            <select class="custom-select" id="downloadOrigin" required>
+            </select>
+          </div>
+          <div class="input-group mb-3">
+            <input id='fileName' type='text' class="form-control" placeholder='Desired file name...' aria-label='Desired file name...'
+              required>
+            <input id='downloadHash' type='text' class="form-control" placeholder='Insert the meta hash...' aria-label='Insert the meta hash...'
+              required>
+            <div class="input-group-append">
+              <button id='sendDownloadRequest' type="button" class="btn btn-outline-secondary">Request download</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 <script src="js/server.js" type="text/javascript"></script>
 
