@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strings"
 
 	"github.com/carbeer/Peerster/utils"
 	"github.com/dedis/protobuf"
@@ -47,9 +48,9 @@ func main() {
 	} else if msg != "" && dest != "" {
 		log.Println("Sending private message")
 		SendMessage(utils.Message{Text: msg, Destination: dest}, uiPort)
-	} else if {
+	} else if keywords != "" {
 		log.Println("Sending search request")
-		SendMessage(utils.Message{Keywords: keywords.split(","), Budget: budget})
+		SendMessage(utils.Message{Keywords: strings.Split(keywords, ","), Budget: uint32(budget)}, uiPort)
 	} else {
 		log.Println("Sending normal message")
 		SendMessage(utils.Message{Text: msg}, uiPort)

@@ -35,3 +35,27 @@ func GetChunkSize() int {
 func GetMsgBuffer() int {
 	return 100
 }
+
+func GetDefaultBudget() int {
+	return 2
+}
+
+func GetMaximumBudget() int {
+	return 32
+}
+
+func GetMinimumThreshold() int {
+	return 2
+}
+
+func GetTxPulishHopLimit() int {
+	return 10
+}
+
+func GetBlockPublishHopLimit() int {
+	return 20
+}
+
+func GetNumberOfLeadZeroes() int {
+	return 16
+}

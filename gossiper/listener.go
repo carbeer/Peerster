@@ -9,7 +9,7 @@ import (
 	"github.com/dedis/protobuf"
 )
 
-func (g *Gossiper) ListenClientMessages(quit chan bool) {
+func (g *Gossiper) ListenClientMessages() {
 	for {
 		buffer := make([]byte, 10240)
 		n, _, e := g.ClientConn.ReadFromUDP(buffer)
@@ -24,34 +24,29 @@ func (g *Gossiper) ListenClientMessages(quit chan bool) {
 		}
 		go g.ClientMessageHandler(*msg)
 	}
-	quit <- true
 }
 
-func (g *Gossiper) ListenPeerMessages(quit chan bool) {
+func (g *Gossiper) ListenPeerMessages() {
 	for {
 		buffer := make([]byte, 10240)
 		n, peerAddr, e := g.udpConn.ReadFromUDP(buffer)
 		utils.HandleError(e)
-
 		msg := &utils.GossipPacket{}
 		e = protobuf.Decode(buffer[:n], msg)
 		utils.HandleError(e)
 		go g.peerMessageHandler(*msg, peerAddr.String())
 	}
-	quit <- true
 }
 
 func (g *Gossiper) ClientMessageHandler(msg utils.Message) {
 	var wg sync.WaitGroup
 	var gossipPacket utils.GossipPacket
-	// TODO: Reorder ifs
 	if g.simple {
 		simpleMessage := utils.SimpleMessage{OriginalName: g.name, RelayPeerAddr: g.Address.String(), Contents: msg.Text}
 		gossipPacket = utils.GossipPacket{Simple: &simpleMessage}
 		for _, p := range g.peers {
 			wg.Add(1)
 			go func(p string) {
-				// fmt.Printf("%d: Simple Message\n", time.Now().Second())
 				g.sendToPeer(gossipPacket, p)
 				wg.Done()
 			}(p)

@@ -43,8 +43,8 @@ func main() {
 
 	g := gossiper.NewGossiper(gossipIp, name, gossipPort, uiPort, peers, simple)
 
-	go g.ListenClientMessages(quit)
-	go g.ListenPeerMessages(quit)
+	go g.ListenClientMessages()
+	go g.ListenPeerMessages()
 
 	if !simple {
 		go g.AntiEntropy()

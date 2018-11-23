@@ -24,6 +24,7 @@
       <div class="alert alert-success" role="alert">
         ID of your Peerster node: <label id="id" value=""></label>
       </div>
+
     </p>
     <div class="card">
       <div class="card-header">
@@ -77,8 +78,10 @@
         </div>
         <div id="privateMessageDialog" style="display: none">
           <p> Private dialog with peer <label id='privateMessagePeer' value=''></label></p><br>
-          <textarea id='privateChat' rows='4' cols='50' value='' overflow-y: scroll;></textarea>
-          <br>
+          <div class="form-group">
+            <textarea id='privateChat' class="form-control" rows="4" overflow-y: scroll;></textarea>
+          </div>
+
           <div class="input-group mb-3">
             <input id='privateMessage' class="form-control" type='text' placeholder='Your message...' aria-label="Your message...">
             <div class="input-group-append">

@@ -11,60 +11,6 @@ import (
 )
 
 // Helper functions
-func (g *Gossiper) GetAllReceivedMessages() string {
-	allMsg := ""
-	g.receivedMessagesLock.RLock()
-	for _, v := range g.ReceivedMessages {
-		for _, rm := range v {
-			if rm.Text != "" {
-				if rm.Origin == g.name {
-					allMsg = fmt.Sprintf("%sYOU: %s\n", allMsg, rm.Text)
-				} else {
-					allMsg = fmt.Sprintf("%s%s: %s\n", allMsg, rm.Origin, rm.Text)
-				}
-			}
-		}
-	}
-	g.receivedMessagesLock.RUnlock()
-	return allMsg
-}
-
-func (g *Gossiper) GetAllReceivedPrivateMessages(dest string) string {
-	allMsg := ""
-	g.privateMessagesLock.RLock()
-	for _, v := range g.PrivateMessages {
-		for _, rm := range v {
-			if rm.Text != "" {
-				if rm.Destination == dest {
-					allMsg = fmt.Sprintf("%sYOU: %s\n", allMsg, rm.Text)
-				} else if rm.Origin == dest {
-					allMsg = fmt.Sprintf("%s%s: %s\n", allMsg, rm.Origin, rm.Text)
-				}
-			}
-		}
-	}
-	g.privateMessagesLock.RUnlock()
-	return allMsg
-}
-
-func (g *Gossiper) GetAllPeers() string {
-	allPeers := ""
-	for _, peer := range g.peers {
-		allPeers = allPeers + peer + "\n"
-	}
-	return allPeers
-}
-
-func (g *Gossiper) GetAllOrigins() string {
-	allOrigins := ""
-	g.nextHopLock.RLock()
-	for k, _ := range g.nextHop {
-		allOrigins = allOrigins + k + "\n"
-	}
-	g.nextHopLock.RUnlock()
-	return allOrigins
-}
-
 func (g *Gossiper) unmarshalAndForward(r *http.Request) {
 	var msg utils.Message
 	e := json.NewDecoder(r.Body).Decode(&msg)
@@ -95,7 +41,7 @@ func (g *Gossiper) handleMessage(w http.ResponseWriter, r *http.Request) {
 		utils.MarshalAndWrite(w, http.StatusOK)
 		break
 	case http.MethodGet:
-		utils.MarshalAndWrite(w, g.GetAllReceivedMessages())
+		utils.MarshalAndWrite(w, g.getAllRumorMessages())
 		break
 	default:
 		utils.MarshalAndWrite(w, http.StatusMethodNotAllowed)
@@ -110,7 +56,7 @@ func (g *Gossiper) handlePrivateMessage(w http.ResponseWriter, r *http.Request) 
 		break
 	case http.MethodGet:
 		keys, _ := r.URL.Query()["peer"]
-		utils.MarshalAndWrite(w, g.GetAllReceivedPrivateMessages(keys[0]))
+		utils.MarshalAndWrite(w, g.getAllPrivateMessages(keys[0]))
 		break
 	default:
 		utils.MarshalAndWrite(w, http.StatusMethodNotAllowed)

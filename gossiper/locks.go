@@ -1,6 +1,11 @@
 package gossiper
 
-import "github.com/carbeer/Peerster/utils"
+import (
+	"fmt"
+	"time"
+
+	"github.com/carbeer/Peerster/utils"
+)
 
 func (g *Gossiper) getReceivedMessages(key string) []utils.RumorMessage {
 	g.receivedMessagesLock.RLock()
@@ -12,6 +17,7 @@ func (g *Gossiper) getReceivedMessages(key string) []utils.RumorMessage {
 func (g *Gossiper) appendReceivedMessages(key string, value utils.RumorMessage) {
 	g.receivedMessagesLock.Lock()
 	g.ReceivedMessages[key] = append(g.ReceivedMessages[key], value)
+	g.addChronRumorMessage(&value)
 	g.receivedMessagesLock.Unlock()
 }
 
@@ -25,6 +31,7 @@ func (g *Gossiper) getPrivateMessages(key string) []utils.PrivateMessage {
 func (g *Gossiper) appendPrivateMessages(key string, value utils.PrivateMessage) {
 	g.privateMessagesLock.Lock()
 	g.PrivateMessages[key] = append(g.PrivateMessages[key], value)
+	g.addChronPrivateMessage(&value)
 	g.privateMessagesLock.Unlock()
 }
 
@@ -136,4 +143,52 @@ func (g *Gossiper) popRequestedChunks(key string) utils.ChunkInfo {
 	delete(g.requestedChunks, key)
 	g.requestedChunksLock.Unlock()
 	return val
+}
+
+func (g *Gossiper) addChronRumorMessage(value interface{}) {
+	g.chronRumorMessagesLock.Lock()
+	msg, _ := value.(*utils.RumorMessage)
+	g.chronRumorMessages = append(g.chronRumorMessages, utils.StoredMessage{Message: msg, Timestamp: time.Now()})
+	g.chronRumorMessagesLock.Unlock()
+}
+
+func (g *Gossiper) getAllRumorMessages() string {
+	allMsg := ""
+	g.chronRumorMessagesLock.RLock()
+	for _, stored := range g.chronRumorMessages {
+		msg, _ := stored.Message.(*utils.RumorMessage)
+		if msg.Origin == g.name {
+			allMsg = fmt.Sprintf("%sYOU: %s\n", allMsg, msg.Text)
+		} else {
+			allMsg = fmt.Sprintf("%s%s: %s\n", allMsg, msg.Origin, msg.Text)
+		}
+	}
+	g.chronRumorMessagesLock.RUnlock()
+	return allMsg
+}
+
+func (g *Gossiper) addChronPrivateMessage(value interface{}) {
+	g.chronPrivateMessagesLock.Lock()
+	msg, _ := value.(*utils.PrivateMessage)
+	if msg.Origin != g.name {
+		g.chronPrivateMessages[msg.Origin] = append(g.chronPrivateMessages[msg.Origin], utils.StoredMessage{Message: msg, Timestamp: time.Now()})
+	} else {
+		g.chronPrivateMessages[msg.Origin] = append(g.chronPrivateMessages[msg.Destination], utils.StoredMessage{Message: msg, Timestamp: time.Now()})
+	}
+	g.chronPrivateMessagesLock.Unlock()
+}
+
+func (g *Gossiper) getAllPrivateMessages(dest string) string {
+	allMsg := ""
+	g.chronPrivateMessagesLock.RLock()
+	for _, stored := range g.chronPrivateMessages[dest] {
+		msg, _ := stored.Message.(*utils.PrivateMessage)
+		if msg.Destination == dest {
+			allMsg = fmt.Sprintf("%sYOU: %s\n", allMsg, msg.Text)
+		} else {
+			allMsg = fmt.Sprintf("%s%s: %s\n", allMsg, msg.Origin, msg.Text)
+		}
+	}
+	g.chronPrivateMessagesLock.RUnlock()
+	return allMsg
 }

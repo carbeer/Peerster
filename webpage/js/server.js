@@ -62,9 +62,7 @@ function getMessages() {
     url: '/message',
     type: "GET",
     success: function (data) {
-      messages = JSON.parse(data);
-      messages = orderKnownMessages(messages, $('#chat').val());
-      $('#chat').val(messages);
+      $('#chat').val(JSON.parse(data));
     },
     complete: function () {
       setTimeout(getMessages, 5000);
@@ -77,9 +75,7 @@ function getPrivateMessages() {
     url: '/privateMessage?peer=' + privateMessagePeer,
     type: "GET",
     success: function (data) {
-      messages = JSON.parse(data);
-      messages = orderKnownMessages(messages, $('#privateChat').val());
-      $('#privateChat').val(messages);
+      $('#privateChat').val(JSON.parse(data));
     },
     complete: function () {
       setTimeout(getPrivateMessages, 5000);
@@ -114,7 +110,6 @@ function getPeers() {
 }
 
 function getKnownOrigins() {
-
   $.ajax({
     async: false,
     url: "/origins",
@@ -188,22 +183,6 @@ function openPrivateDialog(origin) {
   $('#privateMessagePeer').empty().append(origin)
   document.getElementById("privateMessageDialog").style.display = "block";
   getPrivateMessages();
-}
-
-
-function orderKnownMessages(newMessages, orderedMessages) {
-  if (orderedMessages == null) {
-    return newMessages;
-  }
-  var splitOrdered = orderedMessages.split("\n");
-  var splitNew = newMessages.split("\n");
-
-  var real = splitNew.diff(splitOrdered);
-  
-  real.forEach(elem => {
-    orderedMessages = orderedMessages + elem  + "\n";
-  })
-  return orderedMessages;
 }
 
 Array.prototype.diff = function(a) {

@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"time"
 )
 
 type SimpleMessage struct {
@@ -115,6 +116,11 @@ type GossipPacket struct {
 	DataReply     *DataReply
 	SearchRequest *SearchRequest
 	SearchReply   *SearchReply
+}
+
+type StoredMessage struct {
+	Message   interface{}
+	Timestamp time.Time
 }
 
 /*

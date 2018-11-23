@@ -23,9 +23,11 @@ type Gossiper struct {
 	simple    bool
 	idCounter uint32
 	// Sorted list of received messages
-	ReceivedMessages map[string][]utils.RumorMessage
-	PrivateMessages  map[string][]utils.PrivateMessage
-	// Keeps track of wanted messages
+	ReceivedMessages     map[string][]utils.RumorMessage
+	PrivateMessages      map[string][]utils.PrivateMessage
+	chronRumorMessages   []utils.StoredMessage
+	chronPrivateMessages map[string][]utils.StoredMessage
+
 	// Tracks the status packets from rumorMongerings owned by this peer
 	rumorMongeringChannel map[string]chan utils.StatusPacket
 	dataRequestChannel    map[string]chan bool
@@ -34,7 +36,7 @@ type Gossiper struct {
 	// Get utils.File by Metahash
 	storedFiles  map[string]utils.File
 	storedChunks map[string][]byte
-	// The next hash to be quested given the current hash
+	// The next hash to be requested given the current hash
 	requestedChunks map[string]utils.ChunkInfo
 
 	// Locks for maps
@@ -46,6 +48,8 @@ type Gossiper struct {
 	storedChunksLock          sync.RWMutex
 	requestedChunksLock       sync.RWMutex
 	dataRequestChannelLock    sync.RWMutex
+	chronRumorMessagesLock    sync.RWMutex
+	chronPrivateMessagesLock  sync.RWMutex
 }
 
 func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []string, simple bool) *Gossiper {
@@ -69,6 +73,8 @@ func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []stri
 		storedChunks:              make(map[string][]byte),
 		requestedChunks:           make(map[string]utils.ChunkInfo),
 		dataRequestChannel:        make(map[string]chan bool),
+		chronRumorMessages:        []utils.StoredMessage{},
+		chronPrivateMessages:      make(map[string][]utils.StoredMessage),
 		receivedMessagesLock:      sync.RWMutex{},
 		privateMessagesLock:       sync.RWMutex{},
 		rumorMongeringChannelLock: sync.RWMutex{},
@@ -77,6 +83,8 @@ func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []stri
 		storedChunksLock:          sync.RWMutex{},
 		requestedChunksLock:       sync.RWMutex{},
 		dataRequestChannelLock:    sync.RWMutex{},
+		chronRumorMessagesLock:    sync.RWMutex{},
+		chronPrivateMessagesLock:  sync.RWMutex{},
 	}
 }
 
@@ -123,4 +131,22 @@ func (g *Gossiper) addPeerToListIfApplicable(adr string) {
 		}
 	}
 	g.peers = append(g.peers, adr)
+}
+
+func (g *Gossiper) GetAllPeers() string {
+	allPeers := ""
+	for _, peer := range g.peers {
+		allPeers = allPeers + peer + "\n"
+	}
+	return allPeers
+}
+
+func (g *Gossiper) GetAllOrigins() string {
+	allOrigins := ""
+	g.nextHopLock.RLock()
+	for k, _ := range g.nextHop {
+		allOrigins = allOrigins + k + "\n"
+	}
+	g.nextHopLock.RUnlock()
+	return allOrigins
 }
