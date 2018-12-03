@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -46,8 +47,24 @@ type Message struct {
 	FileName    string   `json:"filename"`
 	Request     string   `json:"request"`
 	Keywords    []string `json:"keywords"`
-	Budget      uint32   `json:"budget"`
+	Budget      int64    `json:"budget"`
 	Peer        string   `json:"peer"`
+}
+
+type TxPublish struct {
+	File     File
+	HopLimit uint32
+}
+
+type BlockPublish struct {
+	Block    Block
+	HopLimit uint32
+}
+
+type Block struct {
+	PrevHash     [32]byte
+	Nonce        [32]byte
+	Transactions []TxPublish
 }
 
 type PeerStatus struct {
@@ -66,6 +83,18 @@ type SearchRequest struct {
 	Keywords []string
 }
 
+func (s *SearchRequest) GetIdentifier() string {
+	return fmt.Sprintf("%s:%s", s.Origin, s.Keywords)
+}
+
+func (s *SearchRequest) GetLocalIdentifier() string {
+	return fmt.Sprintf("%d:%s", s.Budget, s.Keywords)
+}
+
+func (s *SearchRequest) GetKeywordIdentifier() string {
+	return strings.Join(s.Keywords, ",")
+}
+
 type SearchReply struct {
 	Origin      string
 	Destination string
@@ -77,6 +106,7 @@ type SearchResult struct {
 	FileName     string
 	MetafileHash []byte
 	ChunkMap     []uint64
+	ChunkCount   uint64
 }
 
 func (sp *StatusPacket) ToString() string {
@@ -91,6 +121,18 @@ type File struct {
 	FileName string
 	FileSize int64
 	MetaHash string
+}
+
+type CachedRequest struct {
+	Timestamp time.Time
+	Request   SearchRequest
+}
+
+type ExternalFile struct {
+	File
+	// Chunk holder by chunk id
+	Holder                  [][]string
+	MissingChunksUntilMatch uint64
 }
 
 type ChunkInfo struct {
@@ -116,41 +158,11 @@ type GossipPacket struct {
 	DataReply     *DataReply
 	SearchRequest *SearchRequest
 	SearchReply   *SearchReply
+	TxPublish     *TxPublish
+	BlockPublish  *BlockPublish
 }
 
 type StoredMessage struct {
 	Message   interface{}
 	Timestamp time.Time
 }
-
-/*
-// Make RumorMessages sortable according to ID
-type RumorMessages []RumorMessage
-
-func (rm RumorMessages) Len() int {
-	return len(rm)
-}
-
-func (rm RumorMessages) GetById(id int) RumorMessage {
-	return rm[id-1]
-}
-
-func (rm RumorMessages) Less(i, j int) bool {
-	return rm[i].ID < rm[j].ID
-}
-
-func (rm RumorMessages) Swap(i, j int) {
-	rm[i], rm[j] = rm[j], rm[i]
-}
-
-func (rm RumorMessage) GetIdentifier() string {
-	return fmt.Sprintf("%v%v", rm.Origin, rm.ID)
-}
-
-func (rm1 RumorMessage) CompareRumorMessage(rm2 RumorMessage) bool {
-	if rm1.Origin != rm2.Origin || rm1.ID != rm2.ID || rm1.Text != rm2.Text {
-		return false
-	}
-	return true
-}
-*/

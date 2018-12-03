@@ -61,15 +61,15 @@ func (g *Gossiper) ClientMessageHandler(msg utils.Message) {
 		} else if msg.Text != "" {
 			if msg.Destination == "" {
 				g.newRumorMongeringMessage(msg)
-			} else if len(msg.Keywords) > 0 {
-				g.newSearchRequest(msg)
 			} else {
 				g.newPrivateMessage(msg)
 			}
 		} else if msg.Peer != "" {
 			g.addPeerToListIfApplicable(msg.Peer)
+		} else if len(msg.Keywords) > 0 {
+			g.newSearchRequest(msg)
 		} else {
-			fmt.Printf("\n\nYOUR CLIENT MESSAGE:\nDestination: %s, FileName: %s, Request: %s, Text: %s\nWHAT'S THIS SUPPOSED TO BE? NOT PROPAGATING THIS.\n\n\n", msg.Destination, msg.FileName, msg.Request, msg.Text)
+			fmt.Printf("\n\nYOUR CLIENT MESSAGE:\n%+v\nWHAT'S THIS SUPPOSED TO BE? NOT PROPAGATING THIS.\n\n\n", msg)
 		}
 	}
 	wg.Wait()
@@ -97,6 +97,15 @@ func (g *Gossiper) peerMessageHandler(msg utils.GossipPacket, sender string) {
 	} else if msg.DataReply != nil {
 		fmt.Printf("%s: Got data reply from %s \n", g.name, sender)
 		g.dataReplyHandler(*msg.DataReply)
+	} else if msg.SearchReply != nil {
+		fmt.Printf("%s: Got search reply from %s\n", g.name, sender)
+		for result := range msg.SearchReply.Results {
+			fmt.Printf("%+v\n", result)
+		}
+		g.searchReplyHandler(*msg.SearchReply)
+	} else if msg.SearchRequest != nil {
+		fmt.Printf("%s: Got search request from %s \n", g.name, sender)
+		g.searchRequestHandler(*msg.SearchRequest, false)
 	} else {
 		fmt.Printf("\n\nWHAT'S THIS PEER MESSAGE SUPPOSED TO BE?.\n\n\n")
 	}

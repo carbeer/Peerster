@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -55,4 +56,30 @@ func GetHashAtIndex(metaFile []byte, index int) []byte {
 		return metaFile[begin:end]
 	}
 	return nil
+}
+
+func ByteMetaHash(hash string) []byte {
+	res, e := hex.DecodeString(hash)
+	HandleError(e)
+	return res
+}
+
+func StringHash(hash []byte) string {
+	return hex.EncodeToString(hash)
+}
+
+func Contains(s []string, str string) bool {
+	for _, v := range s {
+		if v == str {
+			return true
+		}
+	}
+	return false
+}
+
+func MinUint64(a uint64, b uint64) uint64 {
+	if a > b {
+		return b
+	}
+	return a
 }

@@ -25,7 +25,7 @@ func (g *Gossiper) sendDataRequest(msg utils.Message) {
 	for {
 		g.sendToPeer(gossipMessage, g.getNextHop(msg.Destination).Address)
 		select {
-		case <-time.After(5 * time.Second):
+		case <-time.After(utils.GetDataRequestTimeout()):
 			fmt.Printf("TIMEOUT\n")
 			if g.getDataRequestChannel(msg.Request) == nil {
 				fmt.Printf("Not relevant anymore\n")
@@ -38,7 +38,6 @@ func (g *Gossiper) sendDataRequest(msg utils.Message) {
 			return
 		}
 	}
-
 }
 
 func (g *Gossiper) dataRequestHandler(msg utils.DataRequest, sender string) {

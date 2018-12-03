@@ -5,8 +5,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math"
-	"math/rand"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/carbeer/Peerster/utils"
 )
@@ -27,30 +28,59 @@ func (g *Gossiper) newPrivateMessage(msg utils.Message) {
 }
 
 func (g *Gossiper) newSearchRequest(msg utils.Message) {
-	msg.Budget--
+	var searchRequest utils.SearchRequest
+	var timeout <-chan time.Time
+	fulfilled := uint32(0)
+	defaultBudget := false
 
-	// Initiate Reply
-	if msg.Budget <= 0 {
-		return
+	if msg.Budget < 0 {
+		defaultBudget = true
+		searchRequest = utils.SearchRequest{Origin: g.name, Budget: utils.GetDefaultBudget(), Keywords: msg.Keywords}
+	} else {
+		searchRequest = utils.SearchRequest{Origin: g.name, Budget: uint64(msg.Budget), Keywords: msg.Keywords}
 	}
+	// Create a channel that is added to the list of searchRequests
+	g.setSearchRequestChannel(searchRequest, make(chan uint32, utils.GetMsgBuffer()))
+	g.searchRequestHandler(searchRequest, false)
+	fmt.Printf("SEARCHING for keywords %s with budget %d\n", strings.Join(searchRequest.Keywords, ","), searchRequest.Budget)
 
-	perPeerBudget := int(msg.Budget) / len(g.peers)
-	remainder := int(msg.Budget) % len(g.peers)
-
-	gossipMessageLargeB := utils.GossipPacket{SearchRequest: &utils.SearchRequest{Origin: g.name, Budget: uint64(perPeerBudget + remainder), Keywords: msg.Keywords}}
-	gossipMessageSmallB := utils.GossipPacket{SearchRequest: &utils.SearchRequest{Origin: g.name, Budget: uint64(perPeerBudget), Keywords: msg.Keywords}}
-
-	// Randomize which peers will get the larger budget
-	for ix := range rand.Perm(len(g.peers)) {
-		if remainder > 0 {
-			remainder--
-			g.sendToPeer(gossipMessageLargeB, g.getNextHop(g.peers[ix]).Address)
-		} else if perPeerBudget > 0 {
-			g.sendToPeer(gossipMessageSmallB, g.getNextHop(g.peers[ix]).Address)
-		} else {
-			break
+	if defaultBudget {
+		timeout = time.After(utils.GetSearchRequestTimeout())
+	}
+Loop:
+	for {
+		select {
+		case <-timeout:
+			fmt.Printf("%d: TIMEOUT, DOUBLING BUDGET\n", time.Now().Second())
+			if searchRequest.Budget == utils.GetMaximumBudget() {
+				fmt.Printf("Reached maximum budget. Stop searching.\n")
+				break Loop
+			}
+			searchRequest.Budget = utils.MinUint64(searchRequest.Budget*2, utils.GetMaximumBudget())
+			fmt.Printf("SEARCHING for keywords %s with budget %d\n", strings.Join(searchRequest.Keywords, ","), searchRequest.Budget)
+			g.searchRequestHandler(searchRequest, true)
+			timeout = time.After(utils.GetSearchRequestTimeout())
+		case new := <-g.getSearchRequestChannel(searchRequest):
+			fulfilled += new
+			// Process message
+			if fulfilled >= utils.GetMinimumThreshold() {
+				fmt.Printf("SEARCH FINISHED\n")
+				break Loop
+			}
 		}
 	}
+	g.deleteSearchRequestChannel(searchRequest)
+}
+
+func (g *Gossiper) fulfilledQuery(msg utils.SearchRequest) bool {
+	// 2 files were found and all the chunks were found at at least one peer
+
+	if 0 == 0 {
+		return true
+	} else if msg.Budget >= utils.GetMaximumBudget() {
+		return true
+	}
+	return false
 }
 
 func (g *Gossiper) newDataReplyMessage(msg utils.DataRequest, sender string) {
@@ -71,7 +101,7 @@ func (g *Gossiper) indexFile(msg utils.Message) {
 	fmt.Printf("REQUESTING INDEXING filename %s\n", msg.FileName)
 	var hashFunc = crypto.SHA256.New()
 	var chunkHashed []byte
-	file, e := os.Open(fmt.Sprintf(".%s_SharedFiles%s%s", string(os.PathSeparator), string(os.PathSeparator), msg.FileName))
+	file, e := os.Open(fmt.Sprintf(".%s%s%s%s", string(os.PathSeparator), utils.GetSharedFolder(), string(os.PathSeparator), msg.FileName))
 	utils.HandleError(e)
 
 	fileInfo, e := file.Stat()

@@ -2,6 +2,7 @@ package gossiper
 
 import (
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/carbeer/Peerster/utils"
@@ -191,4 +192,88 @@ func (g *Gossiper) getAllPrivateMessages(dest string) string {
 	}
 	g.chronPrivateMessagesLock.RUnlock()
 	return allMsg
+}
+
+
+
+// Cached requests: same keywords and origin within 0.5s  
+func (g *Gossiper) isCachedSearchRequest(msg utils.SearchRequest) bool {
+	g.cachedSearchRequestsLock.RLock()
+	cached := g.CachedSearchRequests[msg.GetIdentifier()]
+	g.cachedSearchRequestsLock.RUnlock()
+
+	if cached.Timestamp.IsZero() || cached.Timestamp.Add(utils.GetCachingDurationMS()).Before(time.Now()) {
+		g.putSearchRequest(msg)
+		return false
+	}
+	return true
+}
+
+// creates or updates searchRequest
+func (g *Gossiper) putSearchRequest(msg utils.SearchRequest) {
+
+	g.cachedSearchRequestsLock.Lock()
+	if g.CachedSearchRequests[msg.GetIdentifier()].Timestamp.IsZero() {
+		g.CachedSearchRequests[msg.GetIdentifier()] = utils.CachedRequest{Timestamp: time.Now(), Request: msg}
+	} else {
+		tmp := g.CachedSearchRequests[msg.GetIdentifier()]
+		tmp.Timestamp = time.Now()
+		g.CachedSearchRequests[msg.GetIdentifier()] = tmp
+	}
+	g.cachedSearchRequestsLock.Unlock()
+}
+
+
+
+
+func (g *Gossiper) setSearchRequestChannel(key utils.SearchRequest, value chan uint32) {
+	g.searchRequestChannelLock.Lock()
+	g.searchRequestChannel[key.GetKeywordIdentifier()] = value
+	g.searchRequestChannelLock.Unlock()
+}
+
+func (g *Gossiper) getSearchRequestChannel(key utils.SearchRequest) chan uint32 {
+	g.searchRequestChannelLock.RLock()
+	val := g.searchRequestChannel[key.GetKeywordIdentifier()]
+	g.searchRequestChannelLock.RUnlock()
+	return val
+}
+
+func (g *Gossiper) deleteSearchRequestChannel(key utils.SearchRequest) {
+	g.searchRequestChannelLock.Lock()
+	delete(g.searchRequestChannel, key.GetKeywordIdentifier())
+	g.searchRequestChannelLock.Unlock()
+}
+
+func (g *Gossiper) sendToSearchRequestChannel(key utils.SearchRequest, value uint32) {
+	g.searchRequestChannelLock.Lock()
+	g.searchRequestChannel[key.GetKeywordIdentifier()] <- value
+	g.searchRequestChannelLock.Unlock()
+}
+
+
+
+func (g *Gossiper) getChunkHolder(key string, chunkNr int) string {
+	g.externalFilesLock.RLock()
+	val := g.externalFiles[key].Holder[chunkNr][0]
+	g.externalFilesLock.RUnlock()
+	return val
+}
+
+
+func (g *Gossiper) getChronReceivedFiles(msg utils.SearchRequest) []*utils.ExternalFile {
+	g.chronReceivedFilesLock.RLock()
+	val := g.chronReceivedFiles[msg.GetLocalIdentifier()]
+	g.chronReceivedFilesLock.RUnlock()
+	return val
+}
+
+func (g *Gossiper) addChronReceivedFiles(key utils.SearchRequest, value *utils.ExternalFile) {
+	g.chronReceivedFilesLock.Lock()
+	if reflect.ValueOf(g.chronReceivedFiles[key.GetLocalIdentifier()]).IsNil() {
+		g.chronReceivedFiles[key.GetLocalIdentifier()] = []*utils.ExternalFile{value}
+	} else {
+		g.chronReceivedFiles[key.GetLocalIdentifier()] = append(g.chronReceivedFiles[key.GetLocalIdentifier()], value)
+	}
+	g.chronReceivedFilesLock.Unlock()
 }

@@ -21,10 +21,10 @@ var runUI bool
 func main() {
 	flag.IntVar(&uiPort, "UIPort", 8080, "port for the UI client")
 	flag.StringVar(&name, "name", "Peer", "name of the gossiper")
-	flag.BoolVar(&simple, "simple", false, "run gossiper in simple broadcast mode")
+	flag.IntVar(&rtimer, "rtimer", 0, "route rumors sending period in seconds, 0 to disable (default 0)")
 	tmp := flag.String("gossipAddr", "127.0.0.1:5000", "ip:port for the gossiper")
 	peerList := flag.String("peers", "", "comma seperated list of peers of the form ip:port")
-	flag.IntVar(&rtimer, "rtimer", 0, "route rumors sending period in seconds, 0 to disable")
+	flag.BoolVar(&simple, "simple", false, "run gossiper in simple broadcast mode")
 	flag.BoolVar(&runUI, "runUI", false, "serve UI with this gossiper")
 	flag.Parse()
 

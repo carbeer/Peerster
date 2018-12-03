@@ -23,14 +23,20 @@ type Gossiper struct {
 	simple    bool
 	idCounter uint32
 	// Sorted list of received messages
-	ReceivedMessages     map[string][]utils.RumorMessage
-	PrivateMessages      map[string][]utils.PrivateMessage
+	ReceivedMessages map[string][]utils.RumorMessage
+	PrivateMessages  map[string][]utils.PrivateMessage
+	// By filename
+	externalFiles        map[string]*utils.ExternalFile
+	CachedSearchRequests map[string]utils.CachedRequest
 	chronRumorMessages   []utils.StoredMessage
 	chronPrivateMessages map[string][]utils.StoredMessage
+	// by searchRequest.getKeywordIdentifier()
+	chronReceivedFiles map[string][]*utils.ExternalFile
 
 	// Tracks the status packets from rumorMongerings owned by this peer
 	rumorMongeringChannel map[string]chan utils.StatusPacket
 	dataRequestChannel    map[string]chan bool
+	searchRequestChannel  map[string]chan uint32
 	// next hop map Origin --> Address
 	nextHop map[string]utils.HopInfo
 	// Get utils.File by Metahash
@@ -50,6 +56,10 @@ type Gossiper struct {
 	dataRequestChannelLock    sync.RWMutex
 	chronRumorMessagesLock    sync.RWMutex
 	chronPrivateMessagesLock  sync.RWMutex
+	cachedSearchRequestsLock  sync.RWMutex
+	chronReceivedFilesLock    sync.RWMutex
+	searchRequestChannelLock  sync.RWMutex
+	externalFilesLock         sync.RWMutex
 }
 
 func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []string, simple bool) *Gossiper {
@@ -73,8 +83,12 @@ func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []stri
 		storedChunks:              make(map[string][]byte),
 		requestedChunks:           make(map[string]utils.ChunkInfo),
 		dataRequestChannel:        make(map[string]chan bool),
+		searchRequestChannel:      make(map[string]chan uint32),
 		chronRumorMessages:        []utils.StoredMessage{},
 		chronPrivateMessages:      make(map[string][]utils.StoredMessage),
+		CachedSearchRequests:      make(map[string]utils.CachedRequest),
+		chronReceivedFiles:        make(map[string][]*utils.ExternalFile),
+		externalFiles:             make(map[string]*utils.ExternalFile),
 		receivedMessagesLock:      sync.RWMutex{},
 		privateMessagesLock:       sync.RWMutex{},
 		rumorMongeringChannelLock: sync.RWMutex{},
@@ -85,6 +99,10 @@ func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []stri
 		dataRequestChannelLock:    sync.RWMutex{},
 		chronRumorMessagesLock:    sync.RWMutex{},
 		chronPrivateMessagesLock:  sync.RWMutex{},
+		cachedSearchRequestsLock:  sync.RWMutex{},
+		chronReceivedFilesLock:    sync.RWMutex{},
+		searchRequestChannelLock:  sync.RWMutex{},
+		externalFilesLock:         sync.RWMutex{},
 	}
 }
 
