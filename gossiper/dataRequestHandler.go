@@ -14,7 +14,7 @@ func (g *Gossiper) sendDataRequest(msg utils.Message, destination string) {
 
 	gossipMessage := utils.GossipPacket{DataRequest: &dataRequest}
 	if msg.FileName != "" {
-		g.setStoredFile(msg.Request, utils.File{FileName: msg.FileName, MetaHash: msg.Request})
+		g.setStoredFile(msg.Request, utils.File{Name: msg.FileName, MetafileHash: utils.ByteMetaHash(msg.Request)})
 		g.addRequestedChunks(msg.Request, utils.ChunkInfo{FileName: msg.FileName})
 		fmt.Printf("REQUESTING filename %s from %s hash %s\n", msg.FileName, destination, msg.Request)
 	}

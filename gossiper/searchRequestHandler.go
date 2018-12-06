@@ -51,13 +51,13 @@ func (g *Gossiper) searchForOwnedFiles(msg utils.SearchRequest) utils.SearchRepl
 
 	for _, v := range g.storedFiles {
 		for _, name := range msg.Keywords {
-			if strings.Contains(v.FileName, name) {
-				fmt.Printf("%s contains %s\n", v.FileName, name)
+			if strings.Contains(v.Name, name) {
+				fmt.Printf("%s contains %s\n", v.Name, name)
 				chunkMap, chunkCount := g.getAvailableChunks(v)
 				fmt.Printf("Have the following chunks available %v\n", chunkMap)
-				results = append(results, &utils.SearchResult{FileName: v.FileName, MetafileHash: utils.ByteMetaHash(v.MetaHash), ChunkMap: chunkMap, ChunkCount: chunkCount})
+				results = append(results, &utils.SearchResult{FileName: v.Name, MetafileHash: v.MetafileHash, ChunkMap: chunkMap, ChunkCount: chunkCount})
 				fmt.Println("Found the following files: ")
-				fmt.Printf("%+v", &utils.SearchResult{FileName: v.FileName, MetafileHash: utils.ByteMetaHash(v.MetaHash), ChunkMap: chunkMap, ChunkCount: chunkCount})
+				fmt.Printf("%+v", &utils.SearchResult{FileName: v.Name, MetafileHash: v.MetafileHash, ChunkMap: chunkMap, ChunkCount: chunkCount})
 				break // Already returning the file, no matter how many additional keyword matches we have
 			}
 		}
@@ -68,7 +68,7 @@ func (g *Gossiper) searchForOwnedFiles(msg utils.SearchRequest) utils.SearchRepl
 
 func (g *Gossiper) getAvailableChunks(file utils.File) ([]uint64, uint64) {
 	var chunkMap []uint64
-	metaFile := g.getStoredChunk(file.MetaHash)
+	metaFile := g.getStoredChunk(utils.StringHash(file.MetafileHash))
 	i := 0
 	for ; utils.GetHashAtIndex(metaFile, i) != nil; i++ {
 		if !reflect.ValueOf(g.getStoredChunk(utils.StringHash(utils.GetHashAtIndex(metaFile, i)))).IsNil() {
@@ -79,18 +79,18 @@ func (g *Gossiper) getAvailableChunks(file utils.File) ([]uint64, uint64) {
 	return chunkMap, uint64(i)
 }
 
-func (g *Gossiper) getAvailableFileResults(keywords []string) []utils.File {
-	results := []utils.File{}
+func (g *Gossiper) getAvailableFileResults(keywords []string) []utils.FileSkeleton {
+	results := []utils.FileSkeleton{}
 	g.chronReceivedFilesLock.Lock()
 
 	if keywords == nil {
 		for _, v := range g.chronReceivedFiles {
-			results = append(results, v.File)
+			results = append(results, utils.FileSkeleton{Name: v.File.Name, MetafileHash: utils.StringHash(v.File.MetafileHash)})
 		}
 	} else {
 		for _, v := range g.chronReceivedFiles {
-			if utils.Contains(keywords, v.FileName) {
-				results = append(results, v.File)
+			if utils.Contains(keywords, v.Name) {
+				results = append(results, utils.FileSkeleton{Name: v.File.Name, MetafileHash: utils.StringHash(v.File.MetafileHash)})
 			}
 		}
 	}

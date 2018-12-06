@@ -252,10 +252,9 @@ Array.prototype.diff = function (a) {
 };
 
 class File {
-  constructor(fileName, metaHash, fileSize) {
+  constructor(fileName, metaHash) {
     this.fileName = fileName;
     this.metaHash = metaHash;
-    this.fileSize = fileSize;
     Object.keys(this).forEach((key) => (this[key] == null) && delete this[key]);
   }
 }

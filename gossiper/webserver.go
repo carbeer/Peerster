@@ -111,11 +111,6 @@ func (g *Gossiper) handleSearchRequest(w http.ResponseWriter, r *http.Request) {
 		utils.MarshalAndWrite(w, http.StatusOK)
 		break
 	case http.MethodGet:
-		/*var msg utils.Message
-		e := json.NewDecoder(r.Body).Decode(&msg)
-		utils.HandleError(e)
-		files := g.getAvailableFileResults(msg.Keywords)
-		*/
 		files := g.getAvailableFileResults(nil)
 		utils.MarshalAndWrite(w, files)
 		break

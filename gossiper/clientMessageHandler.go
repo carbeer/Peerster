@@ -130,5 +130,5 @@ func (g *Gossiper) indexFile(msg utils.Message) {
 	metaHash := hex.EncodeToString(hashFunc.Sum(nil))
 	g.addStoredChunk(metaHash, chunkHashed)
 	fmt.Printf("Indexed File with Metahash %s\n", metaHash)
-	g.setStoredFile(hex.EncodeToString(hashFunc.Sum(nil)), utils.File{FileName: msg.FileName, MetaHash: metaHash, FileSize: fileSize})
+	g.setStoredFile(hex.EncodeToString(hashFunc.Sum(nil)), utils.File{Name: msg.FileName, MetafileHash: utils.ByteMetaHash(metaHash), Size: fileSize})
 }

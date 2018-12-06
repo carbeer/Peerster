@@ -118,9 +118,14 @@ func (sp *StatusPacket) ToString() string {
 }
 
 type File struct {
-	FileName string `json:"fileName"`
-	FileSize int64  `json:"fileSize"`
-	MetaHash string `json:"metaHash"`
+	Name         string
+	Size         int64
+	MetafileHash []byte
+}
+
+type FileSkeleton struct {
+	Name         string `json:"fileName"`
+	MetafileHash string `json:"metaHash"`
 }
 
 type CachedRequest struct {

@@ -281,7 +281,7 @@ func (g *Gossiper) addChronReceivedFiles(value *utils.ExternalFile) {
 	g.chronReceivedFilesLock.Lock()
 
 	for _, v := range g.chronReceivedFiles {
-		if v.MetaHash == value.MetaHash {
+		if utils.StringHash(v.MetafileHash) == utils.StringHash(value.MetafileHash) {
 			// Already have this file, nothing to append
 			g.chronReceivedFilesLock.Unlock()
 			return

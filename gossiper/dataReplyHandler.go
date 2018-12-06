@@ -75,16 +75,16 @@ func (g *Gossiper) onMetaFileReception(metaFile []byte, hashValue []byte) {
 			break
 		}
 		chunk := utils.StringHash(temp)
-		g.addRequestedChunks(prevChunk, utils.ChunkInfo{ChunkNr: counter, NextHash: chunk, MetaHash: utils.StringHash(hashValue), FileName: file.FileName})
+		g.addRequestedChunks(prevChunk, utils.ChunkInfo{ChunkNr: counter, NextHash: chunk, MetaHash: utils.StringHash(hashValue), FileName: file.Name})
 		prevChunk = chunk
 		counter = counter + 1
 	}
 	// Last element is metaHash
-	g.addRequestedChunks(prevChunk, utils.ChunkInfo{ChunkNr: counter, MetaHash: utils.StringHash(hashValue), FileName: file.FileName})
+	g.addRequestedChunks(prevChunk, utils.ChunkInfo{ChunkNr: counter, MetaHash: utils.StringHash(hashValue), FileName: file.Name})
 }
 
 func (g *Gossiper) reconstructFile(metaHash string) {
-	file, e := os.Create(fmt.Sprintf(".%s%s%s%s", string(os.PathSeparator), utils.GetDownloadFolder(), string(os.PathSeparator), g.getStoredFile(metaHash).FileName))
+	file, e := os.Create(fmt.Sprintf(".%s%s%s%s", string(os.PathSeparator), utils.GetDownloadFolder(), string(os.PathSeparator), g.getStoredFile(metaHash).Name))
 	utils.HandleError(e)
 	defer file.Close()
 	metaFile := g.getStoredChunk(metaHash)
@@ -100,10 +100,10 @@ func (g *Gossiper) reconstructFile(metaHash string) {
 	storedFile := g.getStoredFile(metaHash)
 	fileInfo, e := file.Stat()
 	utils.HandleError(e)
-	storedFile.FileSize = fileInfo.Size()
+	storedFile.Size = fileInfo.Size()
 	g.setStoredFile(metaHash, storedFile)
 
-	fmt.Printf("RECONSTRUCTED file %s\n", storedFile.FileName)
+	fmt.Printf("RECONSTRUCTED file %s\n", storedFile.Name)
 }
 
 func CheckDataValidity(data []byte, hash []byte) bool {

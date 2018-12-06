@@ -72,7 +72,7 @@ func (g *Gossiper) updateExternalFile(key utils.SearchResult, value string, requ
 	g.externalFilesLock.Lock()
 	// Entirely new file
 	if reflect.ValueOf(g.externalFiles[utils.StringHash(key.MetafileHash)]).IsNil() {
-		tmp := &utils.ExternalFile{MissingChunksUntilMatch: key.ChunkCount, File: utils.File{FileName: key.FileName, MetaHash: utils.StringHash(key.MetafileHash)}, Holder: make([][]string, key.ChunkCount+1)}
+		tmp := &utils.ExternalFile{MissingChunksUntilMatch: key.ChunkCount, File: utils.File{Name: key.FileName, MetafileHash: key.MetafileHash}, Holder: make([][]string, key.ChunkCount+1)}
 		for ix, _ := range tmp.Holder {
 			tmp.Holder[ix] = []string{}
 		}
