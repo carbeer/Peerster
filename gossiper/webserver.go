@@ -103,6 +103,26 @@ func (g *Gossiper) handleDownload(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (g *Gossiper) handleSearchRequest(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		g.unmarshalAndForward(r)
+		utils.MarshalAndWrite(w, http.StatusOK)
+		break
+	case http.MethodGet:
+		/*var msg utils.Message
+		e := json.NewDecoder(r.Body).Decode(&msg)
+		utils.HandleError(e)
+		files := g.getAvailableFileResults(msg.Keywords)
+		*/
+		files := g.getAvailableFileResults(nil)
+		utils.MarshalAndWrite(w, files)
+		break
+	default:
+		utils.MarshalAndWrite(w, http.StatusMethodNotAllowed)
+	}
+}
+
 func serveFavicon(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "webpage/favicon.ico")
 }
@@ -118,6 +138,7 @@ func (g *Gossiper) BootstrapUI() {
 	r.HandleFunc("/origins", g.handleGetOrigin).Methods("GET")
 	r.HandleFunc("/file", g.handleFile).Methods("POST")
 	r.HandleFunc("/download", g.handleDownload).Methods("POST")
+	r.HandleFunc("/searchRequest", g.handleSearchRequest).Methods("GET", "POST")
 	r.HandleFunc("/favicon.ico", serveFavicon)
 	r.Handle("/", http.FileServer(http.Dir("webpage/"))).Methods("GET")
 	r.PathPrefix("/js/").Handler(http.StripPrefix("/js/", http.FileServer(http.Dir("webpage/js/"))))

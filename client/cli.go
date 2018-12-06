@@ -38,9 +38,14 @@ func main() {
 	*/
 
 	if file != "" {
-		if request != "" && dest != "" {
-			log.Println("Sending file download request")
-			SendMessage(utils.Message{FileName: file, Request: request, Destination: dest}, uiPort)
+		if request != "" {
+			if dest != "" {
+				log.Println("Sending file download request")
+				SendMessage(utils.Message{FileName: file, Request: request, Destination: dest}, uiPort)
+			} else {
+				log.Println("Sending file download request without dest")
+				SendMessage(utils.Message{FileName: file, Request: request}, uiPort)
+			}
 		} else {
 			log.Println("Sending file indexing request")
 			SendMessage(utils.Message{FileName: file}, uiPort)
@@ -49,7 +54,7 @@ func main() {
 		log.Println("Sending private message")
 		SendMessage(utils.Message{Text: msg, Destination: dest}, uiPort)
 	} else if keywords != "" {
-		log.Println("Keywords:", keywords	)
+		log.Println("Keywords:", keywords)
 		log.Println("Sending search request")
 		SendMessage(utils.Message{Keywords: strings.Split(keywords, ","), Budget: budget}, uiPort)
 	} else {

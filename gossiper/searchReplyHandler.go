@@ -1,7 +1,6 @@
 package gossiper
 
 import (
-	"encoding/hex"
 	"fmt"
 	"log"
 	"reflect"
@@ -72,28 +71,28 @@ func (g *Gossiper) updateExternalFile(key utils.SearchResult, value string, requ
 	found := false
 	g.externalFilesLock.Lock()
 	// Entirely new file
-	if reflect.ValueOf(g.externalFiles[key.FileName]).IsNil() {
-		g.externalFiles[key.FileName] = &utils.ExternalFile{MissingChunksUntilMatch: key.ChunkCount, File: utils.File{FileName: key.FileName, MetaHash: hex.EncodeToString(key.MetafileHash)}, Holder: make([][]string, key.ChunkCount)}
+	if reflect.ValueOf(g.externalFiles[utils.StringHash(key.MetafileHash)]).IsNil() {
+		g.externalFiles[utils.StringHash(key.MetafileHash)] = &utils.ExternalFile{MissingChunksUntilMatch: key.ChunkCount, File: utils.File{FileName: key.FileName, MetaHash: utils.StringHash(key.MetafileHash)}, Holder: make([][]string, key.ChunkCount)}
 		found = true
 	}
 	// val-1 corresponds to index within the slice
 	for _, val := range key.ChunkMap {
 		fmt.Printf("Searching for chunk %d\n", val-1)
 		// already known Chunk but new holder
-		if g.externalFiles[key.FileName].Holder[val-1] != nil && !utils.Contains(g.externalFiles[key.FileName].Holder[val-1], value) {
-			g.externalFiles[key.FileName].Holder[val-1] = append(g.externalFiles[key.FileName].Holder[val-1], value)
+		if g.externalFiles[utils.StringHash(key.MetafileHash)].Holder[val-1] != nil && !utils.Contains(g.externalFiles[utils.StringHash(key.MetafileHash)].Holder[val-1], value) {
+			g.externalFiles[utils.StringHash(key.MetafileHash)].Holder[val-1] = append(g.externalFiles[utils.StringHash(key.MetafileHash)].Holder[val-1], value)
 			found = true
 			// new Chunk
 		} else {
-			g.externalFiles[key.FileName].Holder[val-1] = []string{value}
-			tmp := g.externalFiles[key.FileName]
+			g.externalFiles[utils.StringHash(key.MetafileHash)].Holder[val-1] = []string{value}
+			tmp := g.externalFiles[utils.StringHash(key.MetafileHash)]
 			tmp.MissingChunksUntilMatch -= 1
-			g.externalFiles[key.FileName] = tmp
+			g.externalFiles[utils.StringHash(key.MetafileHash)] = tmp
 			found = true
 
-			if g.externalFiles[key.FileName].MissingChunksUntilMatch == 0 {
-				fmt.Printf("Found all chunks for file %s :-)\n", key.FileName)
-				g.addChronReceivedFiles(request, g.externalFiles[key.FileName])
+			if g.externalFiles[utils.StringHash(key.MetafileHash)].MissingChunksUntilMatch == 0 {
+				fmt.Printf("Found all chunks for file %s :-)\n", utils.StringHash(key.MetafileHash))
+				g.addChronReceivedFiles(g.externalFiles[utils.StringHash(key.MetafileHash)])
 				matches += 1
 			}
 		}

@@ -194,9 +194,7 @@ func (g *Gossiper) getAllPrivateMessages(dest string) string {
 	return allMsg
 }
 
-
-
-// Cached requests: same keywords and origin within 0.5s  
+// Cached requests: same keywords and origin within 0.5s
 func (g *Gossiper) isCachedSearchRequest(msg utils.SearchRequest) bool {
 	g.cachedSearchRequestsLock.RLock()
 	cached := g.CachedSearchRequests[msg.GetIdentifier()]
@@ -223,9 +221,6 @@ func (g *Gossiper) putSearchRequest(msg utils.SearchRequest) {
 	g.cachedSearchRequestsLock.Unlock()
 }
 
-
-
-
 func (g *Gossiper) setSearchRequestChannel(key utils.SearchRequest, value chan uint32) {
 	g.searchRequestChannelLock.Lock()
 	g.searchRequestChannel[key.GetKeywordIdentifier()] = value
@@ -251,8 +246,6 @@ func (g *Gossiper) sendToSearchRequestChannel(key utils.SearchRequest, value uin
 	g.searchRequestChannelLock.Unlock()
 }
 
-
-
 func (g *Gossiper) getChunkHolder(key string, chunkNr int) string {
 	g.externalFilesLock.RLock()
 	val := g.externalFiles[key].Holder[chunkNr][0]
@@ -260,20 +253,28 @@ func (g *Gossiper) getChunkHolder(key string, chunkNr int) string {
 	return val
 }
 
-
-func (g *Gossiper) getChronReceivedFiles(msg utils.SearchRequest) []*utils.ExternalFile {
+func (g *Gossiper) getChronReceivedFiles() []*utils.ExternalFile {
 	g.chronReceivedFilesLock.RLock()
-	val := g.chronReceivedFiles[msg.GetLocalIdentifier()]
+	val := g.chronReceivedFiles
 	g.chronReceivedFilesLock.RUnlock()
 	return val
 }
 
-func (g *Gossiper) addChronReceivedFiles(key utils.SearchRequest, value *utils.ExternalFile) {
+func (g *Gossiper) addChronReceivedFiles(value *utils.ExternalFile) {
 	g.chronReceivedFilesLock.Lock()
-	if reflect.ValueOf(g.chronReceivedFiles[key.GetLocalIdentifier()]).IsNil() {
-		g.chronReceivedFiles[key.GetLocalIdentifier()] = []*utils.ExternalFile{value}
+
+	for _, v := range g.chronReceivedFiles {
+		if v.MetaHash == value.MetaHash {
+			// Already have this file, nothing to append
+			g.chronReceivedFilesLock.Unlock()
+			return
+		}
+	}
+
+	if reflect.ValueOf(g.chronReceivedFiles).IsNil() {
+		g.chronReceivedFiles = []*utils.ExternalFile{value}
 	} else {
-		g.chronReceivedFiles[key.GetLocalIdentifier()] = append(g.chronReceivedFiles[key.GetLocalIdentifier()], value)
+		g.chronReceivedFiles = append(g.chronReceivedFiles, value)
 	}
 	g.chronReceivedFilesLock.Unlock()
 }

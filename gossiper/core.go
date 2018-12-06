@@ -25,13 +25,12 @@ type Gossiper struct {
 	// Sorted list of received messages
 	ReceivedMessages map[string][]utils.RumorMessage
 	PrivateMessages  map[string][]utils.PrivateMessage
-	// By filename
+	// By metahash
 	externalFiles        map[string]*utils.ExternalFile
 	CachedSearchRequests map[string]utils.CachedRequest
 	chronRumorMessages   []utils.StoredMessage
 	chronPrivateMessages map[string][]utils.StoredMessage
-	// by searchRequest.getKeywordIdentifier()
-	chronReceivedFiles map[string][]*utils.ExternalFile
+	chronReceivedFiles   []*utils.ExternalFile
 
 	// Tracks the status packets from rumorMongerings owned by this peer
 	rumorMongeringChannel map[string]chan utils.StatusPacket
@@ -87,7 +86,7 @@ func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []stri
 		chronRumorMessages:        []utils.StoredMessage{},
 		chronPrivateMessages:      make(map[string][]utils.StoredMessage),
 		CachedSearchRequests:      make(map[string]utils.CachedRequest),
-		chronReceivedFiles:        make(map[string][]*utils.ExternalFile),
+		chronReceivedFiles:        []*utils.ExternalFile{},
 		externalFiles:             make(map[string]*utils.ExternalFile),
 		receivedMessagesLock:      sync.RWMutex{},
 		privateMessagesLock:       sync.RWMutex{},

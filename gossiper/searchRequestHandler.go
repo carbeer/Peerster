@@ -78,3 +78,23 @@ func (g *Gossiper) getAvailableChunks(file utils.File) ([]uint64, uint64) {
 	}
 	return chunkMap, uint64(i)
 }
+
+func (g *Gossiper) getAvailableFileResults(keywords []string) []utils.File {
+	results := []utils.File{}
+	g.chronReceivedFilesLock.Lock()
+
+	if keywords == nil {
+		for _, v := range g.chronReceivedFiles {
+			results = append(results, v.File)
+		}
+	} else {
+		for _, v := range g.chronReceivedFiles {
+			if utils.Contains(keywords, v.FileName) {
+				results = append(results, v.File)
+			}
+		}
+	}
+
+	g.chronReceivedFilesLock.Unlock()
+	return results
+}

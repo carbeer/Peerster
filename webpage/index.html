@@ -94,7 +94,7 @@
 
     <div class="card">
       <div class="card-header">
-        <h3 class="card-title">File handling</h3>
+        <h3 class="card-title">File upload</h3>
       </div>
       <div class="card-body">
         <div class="card-section">
@@ -110,23 +110,48 @@
             </div>
           </div>
         </div>
-        <div class="card-section">
-          <label for="downloadOrigin">Download a file</label>
-          <div class="input-group mb-3">
-            <div class="input-group-prepend">
-              <label class="input-group-text" for="downloadOrigin">Peers</label>
-            </div>
-            <select class="custom-select" id="downloadOrigin" required>
-            </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">File download</h3>
+      </div>
+
+      <div class="card-body">
+        <label for="downloadOrigin">Download file from peer by metahash</label>
+        <div class="input-group mb-3">
+          <div class="input-group-prepend">
+            <label class="input-group-text" for="downloadOrigin">Peers</label>
           </div>
-          <div class="input-group mb-3">
-            <input id='fileName' type='text' class="form-control" placeholder='Desired file name...' aria-label='Desired file name...'
-              required>
-            <input id='downloadHash' type='text' class="form-control" placeholder='Insert the meta hash...' aria-label='Insert the meta hash...'
-              required>
-            <div class="input-group-append">
-              <button id='sendDownloadRequest' type="button" class="btn btn-outline-secondary">Request download</button>
-            </div>
+          <select class="custom-select" id="downloadOrigin" required>
+          </select>
+        </div>
+
+        <div class="input-group mb-3">
+          <input id='fileName' type='text' class="form-control" placeholder='Desired file name...' aria-label='Desired file name...'
+            required>
+          <input id='downloadHash' type='text' class="form-control" placeholder='Insert the meta hash...' aria-label='Insert the meta hash...'
+            required>
+          <div class="input-group-append">
+            <button id='sendDownloadRequest' type="button" class="btn btn-outline-secondary">Request download</button>
+          </div>
+        </div>
+        <label for="downloadByName">Download file by name</label>
+        <div class="input-group mb-3">
+          <div class="input-group-prepend">
+            <label class="input-group-text" for="availableFiles">Available files</label>
+          </div>
+          <select class="custom-select" id="availableFiles" size=5>
+          </select>
+        </div>
+
+        <label for="searchFile">Search files by name</label>
+        <div class="input-group mb-3">
+          <input id="searchRequestKeywords" class="form-control" type="text" placeholder="Comma-delimited keywords"
+            aria-label="Comma-delimited keywords">
+          <div class="input-group-append">
+            <button id="searchRequest" type="button" class="btn btn-outline-secondary">Search for files</button>
           </div>
         </div>
       </div>
