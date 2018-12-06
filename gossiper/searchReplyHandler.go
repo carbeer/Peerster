@@ -72,19 +72,24 @@ func (g *Gossiper) updateExternalFile(key utils.SearchResult, value string, requ
 	g.externalFilesLock.Lock()
 	// Entirely new file
 	if reflect.ValueOf(g.externalFiles[utils.StringHash(key.MetafileHash)]).IsNil() {
-		g.externalFiles[utils.StringHash(key.MetafileHash)] = &utils.ExternalFile{MissingChunksUntilMatch: key.ChunkCount, File: utils.File{FileName: key.FileName, MetaHash: utils.StringHash(key.MetafileHash)}, Holder: make([][]string, key.ChunkCount)}
+		tmp := &utils.ExternalFile{MissingChunksUntilMatch: key.ChunkCount, File: utils.File{FileName: key.FileName, MetaHash: utils.StringHash(key.MetafileHash)}, Holder: make([][]string, key.ChunkCount+1)}
+		for ix, _ := range tmp.Holder {
+			tmp.Holder[ix] = []string{}
+		}
+		tmp.Holder[0] = []string{value}
+		g.externalFiles[utils.StringHash(key.MetafileHash)] = tmp
 		found = true
 	}
-	// val-1 corresponds to index within the slice
+	// corresponds to index within the slice
 	for _, val := range key.ChunkMap {
-		fmt.Printf("Searching for chunk %d\n", val-1)
+		fmt.Printf("Searching for chunk %d\n", val)
 		// already known Chunk but new holder
-		if g.externalFiles[utils.StringHash(key.MetafileHash)].Holder[val-1] != nil && !utils.Contains(g.externalFiles[utils.StringHash(key.MetafileHash)].Holder[val-1], value) {
-			g.externalFiles[utils.StringHash(key.MetafileHash)].Holder[val-1] = append(g.externalFiles[utils.StringHash(key.MetafileHash)].Holder[val-1], value)
+		if len(g.externalFiles[utils.StringHash(key.MetafileHash)].Holder[val]) > 0 && !utils.Contains(g.externalFiles[utils.StringHash(key.MetafileHash)].Holder[val], value) {
+			g.externalFiles[utils.StringHash(key.MetafileHash)].Holder[val] = append(g.externalFiles[utils.StringHash(key.MetafileHash)].Holder[val], value)
 			found = true
 			// new Chunk
 		} else {
-			g.externalFiles[utils.StringHash(key.MetafileHash)].Holder[val-1] = []string{value}
+			g.externalFiles[utils.StringHash(key.MetafileHash)].Holder[val] = []string{value}
 			tmp := g.externalFiles[utils.StringHash(key.MetafileHash)]
 			tmp.MissingChunksUntilMatch -= 1
 			g.externalFiles[utils.StringHash(key.MetafileHash)] = tmp

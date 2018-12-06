@@ -1,29 +1,32 @@
 package gossiper
 
 import (
-	"encoding/hex"
 	"fmt"
 	"time"
 
 	"github.com/carbeer/Peerster/utils"
 )
 
-func (g *Gossiper) sendDataRequest(msg utils.Message) {
+func (g *Gossiper) sendDataRequest(msg utils.Message, destination string) {
+	var dataRequest utils.DataRequest
+	hash := utils.ByteMetaHash(msg.Request)
+	dataRequest = utils.DataRequest{Origin: g.name, Destination: destination, HopLimit: utils.GetHopLimitConstant(), HashValue: hash}
 
-	hash, e := hex.DecodeString(msg.Request)
-	utils.HandleError(e)
-	dataRequest := utils.DataRequest{Origin: g.name, Destination: msg.Destination, HopLimit: utils.GetHopLimitConstant(), HashValue: hash}
 	gossipMessage := utils.GossipPacket{DataRequest: &dataRequest}
 	if msg.FileName != "" {
 		g.setStoredFile(msg.Request, utils.File{FileName: msg.FileName, MetaHash: msg.Request})
 		g.addRequestedChunks(msg.Request, utils.ChunkInfo{FileName: msg.FileName})
-		fmt.Printf("REQUESTING filename %s from %s hash %s\n", msg.FileName, msg.Destination, msg.Request)
+		fmt.Printf("REQUESTING filename %s from %s hash %s\n", msg.FileName, destination, msg.Request)
 	}
 
 	response := make(chan bool, utils.GetMsgBuffer())
-	g.setDataRequestChannel(msg.Request, response)
+	if msg.Destination != "" {
+		g.setDataRequestChannel(msg.Request, response, true)
+	} else {
+		g.setDataRequestChannel(msg.Request, response, false)
+	}
 	for {
-		g.sendToPeer(gossipMessage, g.getNextHop(msg.Destination).Address)
+		g.sendToPeer(gossipMessage, g.getNextHop(destination).Address)
 		select {
 		case <-time.After(utils.GetDataRequestTimeout()):
 			fmt.Printf("TIMEOUT\n")

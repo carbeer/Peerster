@@ -86,6 +86,10 @@ func (g *Gossiper) generateStatusPacket() utils.StatusPacket {
 }
 
 func (g *Gossiper) sendAcknowledgement(adr string) {
+	// Don't send ack to self
+	if adr == g.Address.String() {
+		return
+	}
 	statusPacket := g.generateStatusPacket()
 	gossipPacket := utils.GossipPacket{Status: &statusPacket}
 	g.sendToPeer(gossipPacket, adr)

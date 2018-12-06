@@ -26,7 +26,7 @@ $(document).ready(function () {
 
   $('#availableFiles').on("dblclick", "option", function () {
     // ID corresponds to metahash, value to name of the file
-    downloadFile($('#availableFiles option:selected').id(), $('#availableFiles option:selected').val());
+    downloadFile($('#availableFiles option:selected').attr('id'), $('#availableFiles option:selected').val());
   });
 
   $('#searchRequest').on('click', function () {

@@ -15,6 +15,7 @@ func (g *Gossiper) unmarshalAndForward(r *http.Request) {
 	var msg utils.Message
 	e := json.NewDecoder(r.Body).Decode(&msg)
 	utils.HandleError(e)
+	log.Println("Got this: ", msg)
 	g.ClientMessageHandler(msg)
 }
 

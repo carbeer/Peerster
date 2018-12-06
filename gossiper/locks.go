@@ -68,15 +68,24 @@ func (g *Gossiper) getDataRequestChannel(key string) chan bool {
 	return val
 }
 
-func (g *Gossiper) setDataRequestChannel(key string, value chan bool) {
+func (g *Gossiper) getDesintationSpecified(key string) bool {
+	g.dataRequestChannelLock.RLock()
+	val := g.destinationSpecified[key]
+	g.dataRequestChannelLock.RUnlock()
+	return val
+}
+
+func (g *Gossiper) setDataRequestChannel(key string, value chan bool, addValue bool) {
 	g.dataRequestChannelLock.Lock()
 	g.dataRequestChannel[key] = value
+	g.destinationSpecified[key] = addValue
 	g.dataRequestChannelLock.Unlock()
 }
 
 func (g *Gossiper) deleteDataRequestChannel(key string) {
 	g.dataRequestChannelLock.Lock()
 	delete(g.dataRequestChannel, key)
+	delete(g.destinationSpecified, key)
 	g.dataRequestChannelLock.Unlock()
 }
 
@@ -87,8 +96,13 @@ func (g *Gossiper) sendToDataRequestChannel(key string, value bool) {
 }
 
 func (g *Gossiper) getNextHop(key string) utils.HopInfo {
+	var val utils.HopInfo
 	g.nextHopLock.RLock()
-	val := g.nextHop[key]
+	if key == g.name {
+		val = utils.HopInfo{Address: g.Address.String()}
+	} else {
+		val = g.nextHop[key]
+	}
 	g.nextHopLock.RUnlock()
 	return val
 }
@@ -247,8 +261,11 @@ func (g *Gossiper) sendToSearchRequestChannel(key utils.SearchRequest, value uin
 }
 
 func (g *Gossiper) getChunkHolder(key string, chunkNr int) string {
+	var val string
 	g.externalFilesLock.RLock()
-	val := g.externalFiles[key].Holder[chunkNr][0]
+	if !reflect.ValueOf(g.externalFiles[key]).IsNil() && len(g.externalFiles[key].Holder[chunkNr]) > 0 {
+		val = g.externalFiles[key].Holder[chunkNr][0]
+	}
 	g.externalFilesLock.RUnlock()
 	return val
 }

@@ -35,6 +35,7 @@ type Gossiper struct {
 	// Tracks the status packets from rumorMongerings owned by this peer
 	rumorMongeringChannel map[string]chan utils.StatusPacket
 	dataRequestChannel    map[string]chan bool
+	destinationSpecified  map[string]bool
 	searchRequestChannel  map[string]chan uint32
 	// next hop map Origin --> Address
 	nextHop map[string]utils.HopInfo
@@ -82,6 +83,7 @@ func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []stri
 		storedChunks:              make(map[string][]byte),
 		requestedChunks:           make(map[string]utils.ChunkInfo),
 		dataRequestChannel:        make(map[string]chan bool),
+		destinationSpecified:      make(map[string]bool),
 		searchRequestChannel:      make(map[string]chan uint32),
 		chronRumorMessages:        []utils.StoredMessage{},
 		chronPrivateMessages:      make(map[string][]utils.StoredMessage),

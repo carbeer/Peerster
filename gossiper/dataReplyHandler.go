@@ -36,31 +36,37 @@ func (g *Gossiper) receiveDataReply(msg utils.DataReply) {
 	// Corrupted data
 	if !CheckDataValidity(msg.Data, msg.HashValue) {
 		if string(msg.Data) == "" {
-			g.sendToDataRequestChannel(stringHashValue, true)
 			fmt.Printf("DATA FIELD WAS EMPTY - It seems like the peer doesn't have the requested file. Dropping requests.\n")
+			g.sendToDataRequestChannel(stringHashValue, true)
 		}
 		return
 	}
+	destAvailable := g.getDesintationSpecified(reqChunk.MetaHash)
+
 	g.sendToDataRequestChannel(stringHashValue, true)
 	g.addStoredChunk(stringHashValue, msg.Data)
 	if reqChunk.ChunkNr == 0 {
 		fmt.Printf("DOWNLOADING metafile of %s from %s\n", reqChunk.FileName, msg.Origin)
 		g.onMetaFileReception(msg.Data, msg.HashValue)
+		reqChunk.MetaHash = stringHashValue
 	} else {
 		fmt.Printf("DOWNLOADING %s chunk %d from %s\n", reqChunk.FileName, reqChunk.ChunkNr, msg.Origin)
 	}
-	if reqChunk.MetaHash != "" {
+	if reqChunk.NextHash == "" && reqChunk.ChunkNr != 0 {
 		g.popRequestedChunks(stringHashValue)
 		g.reconstructFile(reqChunk.MetaHash)
 		return
 	}
-	g.sendDataRequest(utils.Message{Destination: msg.Origin, Request: g.popRequestedChunks(stringHashValue).NextHash})
+	if !destAvailable {
+		g.sendDataRequest(utils.Message{Request: g.popRequestedChunks(stringHashValue).NextHash}, g.getChunkHolder(reqChunk.MetaHash, (reqChunk.ChunkNr+1)))
+	} else {
+		g.sendDataRequest(utils.Message{Destination: msg.Origin, Request: g.popRequestedChunks(stringHashValue).NextHash}, msg.Origin)
+	}
 }
 
 func (g *Gossiper) onMetaFileReception(metaFile []byte, hashValue []byte) {
-	stringHashValue := hex.EncodeToString(hashValue)
-	file := g.getStoredFile(stringHashValue)
-	prevChunk := stringHashValue
+	file := g.getStoredFile(utils.StringHash(hashValue))
+	prevChunk := utils.StringHash(hashValue)
 
 	counter := 0
 	for {
@@ -68,13 +74,13 @@ func (g *Gossiper) onMetaFileReception(metaFile []byte, hashValue []byte) {
 		if temp == nil {
 			break
 		}
-		chunk := hex.EncodeToString(temp)
-		g.addRequestedChunks(prevChunk, utils.ChunkInfo{ChunkNr: counter, NextHash: chunk, FileName: file.FileName})
+		chunk := utils.StringHash(temp)
+		g.addRequestedChunks(prevChunk, utils.ChunkInfo{ChunkNr: counter, NextHash: chunk, MetaHash: utils.StringHash(hashValue), FileName: file.FileName})
 		prevChunk = chunk
 		counter = counter + 1
 	}
 	// Last element is metaHash
-	g.addRequestedChunks(prevChunk, utils.ChunkInfo{ChunkNr: counter, MetaHash: hex.EncodeToString(hashValue), FileName: file.FileName})
+	g.addRequestedChunks(prevChunk, utils.ChunkInfo{ChunkNr: counter, MetaHash: utils.StringHash(hashValue), FileName: file.FileName})
 }
 
 func (g *Gossiper) reconstructFile(metaHash string) {

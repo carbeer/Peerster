@@ -63,7 +63,7 @@ func (g *Gossiper) searchForOwnedFiles(msg utils.SearchRequest) utils.SearchRepl
 		}
 	}
 	// TODO: Find out what hopLimit is supposed to be
-	return utils.SearchReply{Origin: g.name, Destination: msg.Origin, HopLimit: 100, Results: results}
+	return utils.SearchReply{Origin: g.name, Destination: msg.Origin, HopLimit: uint32(msg.Budget), Results: results}
 }
 
 func (g *Gossiper) getAvailableChunks(file utils.File) ([]uint64, uint64) {

@@ -53,8 +53,13 @@ func (g *Gossiper) ClientMessageHandler(msg utils.Message) {
 		}
 	} else {
 		if msg.FileName != "" {
-			if msg.Request != "" && msg.Destination != "" {
-				g.sendDataRequest(msg)
+			if msg.Request != "" {
+				if msg.Destination != "" {
+					g.sendDataRequest(msg, msg.Destination)
+				} else {
+					g.sendDataRequest(msg, g.getChunkHolder(msg.Request, 0))
+				}
+
 			} else {
 				g.indexFile(msg)
 			}
