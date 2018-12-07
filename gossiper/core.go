@@ -22,6 +22,7 @@ type Gossiper struct {
 	peers     []string
 	simple    bool
 	idCounter uint32
+	miner     chan bool
 	// Sorted list of received messages
 	ReceivedMessages map[string][]utils.RumorMessage
 	PrivateMessages  map[string][]utils.PrivateMessage
@@ -43,7 +44,10 @@ type Gossiper struct {
 	storedFiles  map[string]utils.File
 	storedChunks map[string][]byte
 	// The next hash to be requested given the current hash
-	requestedChunks map[string]utils.ChunkInfo
+	requestedChunks     map[string]utils.ChunkInfo
+	blockHistory        map[[32]byte]utils.BlockWrapper
+	lastBlock           utils.BlockWrapper
+	pendingTransactions []utils.TxPublish
 
 	// Locks for maps
 	receivedMessagesLock      sync.RWMutex
@@ -60,6 +64,7 @@ type Gossiper struct {
 	chronReceivedFilesLock    sync.RWMutex
 	searchRequestChannelLock  sync.RWMutex
 	externalFilesLock         sync.RWMutex
+	chainLock                 sync.RWMutex
 }
 
 func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []string, simple bool) *Gossiper {
@@ -90,6 +95,9 @@ func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []stri
 		CachedSearchRequests:      make(map[string]utils.CachedRequest),
 		chronReceivedFiles:        []*utils.ExternalFile{},
 		externalFiles:             make(map[string]*utils.ExternalFile),
+		blockHistory:              make(map[[32]byte]utils.BlockWrapper),
+		lastBlock:                 utils.BlockWrapper{},
+		miner:                     make(chan bool, 1024),
 		receivedMessagesLock:      sync.RWMutex{},
 		privateMessagesLock:       sync.RWMutex{},
 		rumorMongeringChannelLock: sync.RWMutex{},
@@ -104,6 +112,7 @@ func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []stri
 		chronReceivedFilesLock:    sync.RWMutex{},
 		searchRequestChannelLock:  sync.RWMutex{},
 		externalFilesLock:         sync.RWMutex{},
+		chainLock:                 sync.RWMutex{},
 	}
 }
 

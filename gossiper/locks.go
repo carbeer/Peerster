@@ -295,3 +295,51 @@ func (g *Gossiper) addChronReceivedFiles(value *utils.ExternalFile) {
 	}
 	g.chronReceivedFilesLock.Unlock()
 }
+
+func (g *Gossiper) inBlockHistory(key utils.TxPublish) bool {
+	g.chainLock.Lock()
+	defer g.chainLock.Unlock()
+	currBlock := g.lastBlock
+	for currBlock.Counter != 0 {
+		for _, v := range currBlock.Transactions {
+			if v.File.Name == key.File.Name {
+				return true
+			}
+		}
+		currBlock = g.blockHistory[currBlock.PrevHash] // next block
+	}
+	return false
+}
+
+func (g *Gossiper) inPendingTransactions(key utils.TxPublish) bool {
+	g.chainLock.Lock()
+	defer g.chainLock.Unlock()
+	for _, v := range g.pendingTransactions {
+		if v.File.Name == key.File.Name {
+			return true
+		}
+	}
+	return false
+}
+
+func (g *Gossiper) addPendingTransaction(key utils.TxPublish) {
+	g.chainLock.Lock()
+	g.pendingTransactions = append(g.pendingTransactions, key)
+	// notify miner
+	g.miner <- true
+	g.chainLock.Unlock()
+}
+
+func (g *Gossiper) getPendingTransactions() []utils.TxPublish {
+	g.chainLock.RLock()
+	val := g.pendingTransactions
+	g.chainLock.RUnlock()
+	return val
+}
+
+func (g *Gossiper) getLastBlock() utils.BlockWrapper {
+	g.chainLock.RLock()
+	val := g.lastBlock
+	g.chainLock.RUnlock()
+	return val
+}

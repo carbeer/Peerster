@@ -111,6 +111,12 @@ func (g *Gossiper) peerMessageHandler(msg utils.GossipPacket, sender string) {
 	} else if msg.SearchRequest != nil {
 		fmt.Printf("%s: Got search request from %s \n", g.name, sender)
 		g.searchRequestHandler(*msg.SearchRequest, false)
+	} else if msg.TxPublish != nil {
+		fmt.Printf("%s: Got tx publish from %s \n", g.name, sender)
+		g.txPublishHandler(*msg.TxPublish, sender)
+	} else if msg.BlockPublish != nil {
+		fmt.Printf("%s: Got block publish from %s \n", g.name, sender)
+		g.blockPublishHandler(*msg.BlockPublish, sender)
 	} else {
 		fmt.Printf("\n\nWHAT'S THIS PEER MESSAGE SUPPOSED TO BE?.\n\n\n")
 	}

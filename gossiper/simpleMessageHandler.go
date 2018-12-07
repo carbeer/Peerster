@@ -14,6 +14,7 @@ func (g *Gossiper) simpleMessageHandler(msg utils.SimpleMessage) {
 	if msg.OriginalName == g.name {
 		return
 	}
+	tmp := msg.RelayPeerAddr
 	msg.RelayPeerAddr = g.Address.String()
-	g.broadcastMessage(utils.GossipPacket{Simple: &msg}, msg.RelayPeerAddr)
+	g.broadcastMessage(utils.GossipPacket{Simple: &msg}, tmp)
 }

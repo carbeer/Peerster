@@ -2,7 +2,6 @@ package gossiper
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 	"strings"
 	"time"
@@ -17,7 +16,7 @@ func (g *Gossiper) searchReplyHandler(msg utils.SearchReply) {
 	} else {
 		msg.HopLimit -= 1
 		if msg.HopLimit <= 0 {
-			log.Printf("%s: ATTENTION: Dropping a search reply message for %s\n", g.name, msg.Destination)
+			fmt.Printf("%s: ATTENTION: Dropping a search reply message for %s\n", g.name, msg.Destination)
 			return
 		}
 		gossipMessage := utils.GossipPacket{SearchReply: &msg}

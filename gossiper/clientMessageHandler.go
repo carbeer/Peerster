@@ -14,6 +14,7 @@ import (
 
 func (g *Gossiper) newRumorMongeringMessage(msg utils.Message) {
 	rumorMessage := utils.RumorMessage{Origin: g.name, ID: g.idCounter, Text: msg.Text}
+	fmt.Printf("New rumor mongering message %+v\n", rumorMessage)
 	g.idCounter = g.idCounter + 1
 	g.addToKnownMessages(rumorMessage)
 	g.startRumorMongering(rumorMessage)
@@ -130,5 +131,6 @@ func (g *Gossiper) indexFile(msg utils.Message) {
 	metaHash := hex.EncodeToString(hashFunc.Sum(nil))
 	g.addStoredChunk(metaHash, chunkHashed)
 	fmt.Printf("Indexed File with Metahash %s\n", metaHash)
-	g.setStoredFile(hex.EncodeToString(hashFunc.Sum(nil)), utils.File{Name: msg.FileName, MetafileHash: utils.ByteMetaHash(metaHash), Size: fileSize})
+	g.setStoredFile(utils.StringHash(hashFunc.Sum(nil)), utils.File{Name: msg.FileName, MetafileHash: utils.ByteMetaHash(metaHash), Size: fileSize})
+	g.txPublishHandler(utils.TxPublish{File: utils.File{Name: msg.FileName, MetafileHash: utils.ByteMetaHash(metaHash), Size: fileSize}, HopLimit: utils.GetTxPublishHopLimit() + 1}, "")
 }

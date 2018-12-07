@@ -5,7 +5,7 @@ import (
 )
 
 func GetHopLimitConstant() uint32 {
-	return uint32(10)
+	return 10
 }
 
 func GetRumorMongeringTimeout() time.Duration {
@@ -56,16 +56,17 @@ func GetMinimumThreshold() uint32 {
 	return 2
 }
 
-func GetTxPulishHopLimit() int {
+func GetTxPublishHopLimit() uint32 {
 	return 10
 }
 
-func GetBlockPublishHopLimit() int {
+func GetBlockPublishHopLimit() uint32 {
 	return 20
 }
 
+// 16 leading bits equals 2 leading bytes
 func GetNumberOfLeadZeroes() int {
-	return 16
+	return 2
 }
 
 func GetDownloadFolder() string {

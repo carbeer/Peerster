@@ -70,9 +70,31 @@ func StringHash(hash []byte) string {
 	return hex.EncodeToString(hash)
 }
 
+func FixedStringHash(hash [32]byte) string {
+	return StringHash(hash[:])
+}
+
 func Contains(s []string, str string) bool {
 	for _, v := range s {
 		if v == str {
+			return true
+		}
+	}
+	return false
+}
+
+func ContainsKey(s map[string]interface{}, key string) bool {
+	for k, _ := range s {
+		if k == key {
+			return true
+		}
+	}
+	return false
+}
+
+func ContainsValue(s map[interface{}]string, key string) bool {
+	for _, v := range s {
+		if v == key {
 			return true
 		}
 	}
@@ -106,4 +128,21 @@ func (t *TxPublish) Hash() (out [32]byte) {
 	h.Write(t.File.MetafileHash)
 	copy(out[:], h.Sum(nil))
 	return
+}
+
+func GetRandomNonce() (arr [32]byte) {
+	token := make([]byte, 32)
+	rand.New(rand.NewSource(time.Now().UnixNano())).Read(token)
+	copy(arr[:], token)
+	return
+}
+
+func ValidateBlockHash(block Block) bool {
+	hash := block.Hash()
+	for ix := 0; ix < GetNumberOfLeadZeroes(); ix++ {
+		if hash[ix] != 0 {
+			return false
+		}
+	}
+	return true
 }

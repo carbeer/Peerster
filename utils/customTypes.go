@@ -67,6 +67,11 @@ type Block struct {
 	Transactions []TxPublish
 }
 
+type BlockWrapper struct {
+	Block
+	Counter int
+}
+
 type PeerStatus struct {
 	// Equals the Origin in RumorMessage
 	Identifier string
