@@ -15,7 +15,7 @@ func (g *Gossiper) unmarshalAndForward(r *http.Request) {
 	var msg utils.Message
 	e := json.NewDecoder(r.Body).Decode(&msg)
 	utils.HandleError(e)
-	log.Println("Got this: ", msg)
+	log.Printf("Got this: %+v\n", msg)
 	g.ClientMessageHandler(msg)
 }
 
@@ -124,7 +124,7 @@ func serveFavicon(w http.ResponseWriter, r *http.Request) {
 }
 
 func (g *Gossiper) BootstrapUI() {
-	log.Println("Starting UI on " + fmt.Sprintf("%s:%s", g.Address.IP, utils.GetUIPort()))
+	log.Println("Starting UI on " + fmt.Sprintf("%s:%s", g.Address.IP, utils.UI_PORT))
 	r := mux.NewRouter()
 	r.SkipClean(true)
 	r.HandleFunc("/message", g.handleMessage).Methods("POST", "GET")
@@ -140,5 +140,5 @@ func (g *Gossiper) BootstrapUI() {
 	r.PathPrefix("/js/").Handler(http.StripPrefix("/js/", http.FileServer(http.Dir("webpage/js/"))))
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("webpage/static/"))))
 
-	utils.HandleError(http.ListenAndServe(fmt.Sprintf("%s:%s", utils.GetClientIp(), utils.GetUIPort()), r))
+	utils.HandleError(http.ListenAndServe(fmt.Sprintf("%s:%s", utils.CLIENT_IP, utils.UI_PORT), r))
 }

@@ -29,14 +29,6 @@ func main() {
 	flag.Int64Var(&budget, "budget", -1, "budget for keyword search")
 	flag.Parse()
 
-	/*
-		log.Println("UIPort has value", uiPort)
-		log.Println("msg has value", msg)
-		log.Println("dest has value", dest)
-		log.Println("file has value", file)
-		log.Println("request has value", request)
-	*/
-
 	if file != "" {
 		if request != "" {
 			if dest != "" {
@@ -64,15 +56,12 @@ func main() {
 }
 
 func SendMessage(message utils.Message, uiPort int) {
-	// log.Println("Encoding the message")
 	packetBytes, e := protobuf.Encode(&message)
 	utils.HandleError(e)
 
-	// log.Println("Creating a client connection")
-	udpConn, e := net.Dial("udp4", fmt.Sprintf("%s:%d", utils.GetClientIp(), uiPort))
+	udpConn, e := net.Dial("udp4", fmt.Sprintf("%s:%d", utils.CLIENT_IP, uiPort))
 	utils.HandleError(e)
 
-	// log.Println("Writing the message")
 	_, e = udpConn.Write(packetBytes)
 	utils.HandleError(e)
 }

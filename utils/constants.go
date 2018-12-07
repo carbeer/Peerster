@@ -4,75 +4,21 @@ import (
 	"time"
 )
 
-func GetHopLimitConstant() uint32 {
-	return 10
-}
-
-func GetRumorMongeringTimeout() time.Duration {
-	return time.Second
-}
-
-func GetDataRequestTimeout() time.Duration {
-	return 5 * time.Second
-}
-
-func GetSearchRequestTimeout() time.Duration {
-	return 2 * time.Second
-}
-
-func GetAntiEntropyFrequency() time.Duration {
-	return time.Second
-}
-
-func GetCachingDurationMS() time.Duration {
-	return time.Millisecond * 500
-}
-
-func GetClientIp() string {
-	return "127.0.0.1"
-}
-
-func GetUIPort() string {
-	return "8080"
-}
-
-func GetChunkSize() int {
-	return 8192
-}
-
-func GetMsgBuffer() int {
-	return 100
-}
-
-func GetDefaultBudget() uint64 {
-	return 2
-}
-
-func GetMaximumBudget() uint64 {
-	return 32
-}
-
-func GetMinimumThreshold() uint32 {
-	return 2
-}
-
-func GetTxPublishHopLimit() uint32 {
-	return 10
-}
-
-func GetBlockPublishHopLimit() uint32 {
-	return 20
-}
-
-// 16 leading bits equals 2 leading bytes
-func GetNumberOfLeadZeroes() int {
-	return 2
-}
-
-func GetDownloadFolder() string {
-	return "_Downloads"
-}
-
-func GetSharedFolder() string {
-	return "_SharedFiles"
-}
+const HOPLIMIT_CONSTANT = uint32(10)
+const RUNOR_TIMEOUT = time.Second
+const DATA_REQUEST_TIMEOUT = 5 * time.Second
+const SEARCH_REQUEST_TIMEOUT = 2 * time.Second
+const ANTI_ENTROPY_FREQUENCY = time.Second
+const CACHING_DURATION = 500 * time.Millisecond
+const CLIENT_IP = "127.0.0.1"
+const UI_PORT = "8080"
+const CHUNK_SIZE = 8192
+const MSG_BUFFER = 100
+const DEFAULT_BUDGET = uint64(2)
+const MAX_BUDGET = uint64(32)
+const MIN_THRESHOLD = uint32(2)
+const TX_PUBLISH_HOP_LIMIT = uint32(10)
+const BLOCK_PUBLISH_HOP_LIMIT = uint32(20)
+const LEADING_ZEROES = 2
+const DOWNLOAD_FOLDER = "_Downloads"
+const SHARED_FOLDER = "_SharedFiles"

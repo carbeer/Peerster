@@ -24,7 +24,7 @@ func (g *Gossiper) rumorMessageHandler(msg utils.RumorMessage, sender string) {
 	if origin != g.name {
 		g.updateNextHop(msg, sender)
 		if len(g.getReceivedMessages(origin))+1 == int(msg.ID) {
-			g.addToKnownMessages(msg)
+			g.appendReceivedMessages(msg.Origin, msg)
 
 			wg.Add(1)
 			go func() {
@@ -35,10 +35,6 @@ func (g *Gossiper) rumorMessageHandler(msg utils.RumorMessage, sender string) {
 	}
 	g.sendAcknowledgement(sender)
 	wg.Wait()
-}
-
-func (g *Gossiper) addToKnownMessages(msg utils.RumorMessage) {
-	g.appendReceivedMessages(msg.Origin, msg)
 }
 
 func (g *Gossiper) updateNextHop(msg utils.RumorMessage, sender string) {
@@ -79,14 +75,14 @@ func (g *Gossiper) startRumorMongering(msg utils.RumorMessage) {
 
 func (g *Gossiper) startRumorMongeringConnection(peer string, gossipPacket utils.GossipPacket) bool {
 	// Create a channel that is added to the list of owned rumorMongergings
-	g.setRumorMongeringChannel(peer, make(chan utils.StatusPacket, utils.GetMsgBuffer()))
+	g.setRumorMongeringChannel(peer, make(chan utils.StatusPacket, utils.MSG_BUFFER))
 	fmt.Printf("%d: Initiating rumor mongering connection \n", time.Now().Second())
 	g.sendToPeer(gossipPacket, peer)
 
 Loop:
 	for {
 		select {
-		case <-time.After(utils.GetRumorMongeringTimeout()):
+		case <-time.After(utils.RUNOR_TIMEOUT):
 			fmt.Printf("%d: TIMEOUT\n", time.Now().Second())
 			break Loop
 		case status := <-g.getRumorMongeringChannel(peer):

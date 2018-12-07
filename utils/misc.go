@@ -16,7 +16,7 @@ import (
 
 func HandleError(e error) {
 	if e != nil {
-		fmt.Println("General error ", e)
+		fmt.Println("General error", e)
 		debug.PrintStack()
 	}
 }
@@ -43,7 +43,7 @@ func GetNextDataChunk(file *os.File, step int) []byte {
 		if e == io.EOF {
 			return nil
 		}
-		fmt.Println("Error in next data chunk ", e)
+		fmt.Println("Error in next data chunk", e)
 		debug.PrintStack()
 	}
 	return bytes
@@ -137,9 +137,22 @@ func GetRandomNonce() (arr [32]byte) {
 	return
 }
 
+func NextNonce(arr [32]byte) [32]byte {
+	// Increment the nonce by 1
+	for i := 0; i < len(arr); i++ {
+		if arr[i] < 255 {
+			arr[i]++
+			break
+		} else {
+			arr[i] = 0
+		}
+	}
+	return arr
+}
+
 func ValidateBlockHash(block Block) bool {
 	hash := block.Hash()
-	for ix := 0; ix < GetNumberOfLeadZeroes(); ix++ {
+	for ix := 0; ix < LEADING_ZEROES; ix++ {
 		if hash[ix] != 0 {
 			return false
 		}

@@ -163,7 +163,10 @@ func (g *Gossiper) popRequestedChunks(key string) utils.ChunkInfo {
 func (g *Gossiper) addChronRumorMessage(value interface{}) {
 	g.chronRumorMessagesLock.Lock()
 	msg, _ := value.(*utils.RumorMessage)
-	g.chronRumorMessages = append(g.chronRumorMessages, utils.StoredMessage{Message: msg, Timestamp: time.Now()})
+	// Filter route rumor messages
+	if msg.Text != "" {
+		g.chronRumorMessages = append(g.chronRumorMessages, utils.StoredMessage{Message: msg, Timestamp: time.Now()})
+	}
 	g.chronRumorMessagesLock.Unlock()
 }
 
@@ -214,7 +217,7 @@ func (g *Gossiper) isCachedSearchRequest(msg utils.SearchRequest) bool {
 	cached := g.CachedSearchRequests[msg.GetIdentifier()]
 	g.cachedSearchRequestsLock.RUnlock()
 
-	if cached.Timestamp.IsZero() || cached.Timestamp.Add(utils.GetCachingDurationMS()).Before(time.Now()) {
+	if cached.Timestamp.IsZero() || cached.Timestamp.Add(utils.CACHING_DURATION).Before(time.Now()) {
 		g.putSearchRequest(msg)
 		return false
 	}
@@ -325,6 +328,7 @@ func (g *Gossiper) inPendingTransactions(key utils.TxPublish) bool {
 func (g *Gossiper) addPendingTransaction(key utils.TxPublish) {
 	g.chainLock.Lock()
 	g.pendingTransactions = append(g.pendingTransactions, key)
+	fmt.Printf("Appending the following transaction %+v\n", key)
 	// notify miner
 	g.miner <- true
 	g.chainLock.Unlock()

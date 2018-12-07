@@ -104,9 +104,6 @@ func (g *Gossiper) peerMessageHandler(msg utils.GossipPacket, sender string) {
 		g.dataReplyHandler(*msg.DataReply)
 	} else if msg.SearchReply != nil {
 		fmt.Printf("%s: Got search reply from %s\n", g.name, sender)
-		for result := range msg.SearchReply.Results {
-			fmt.Printf("%+v\n", result)
-		}
 		g.searchReplyHandler(*msg.SearchReply)
 	} else if msg.SearchRequest != nil {
 		fmt.Printf("%s: Got search request from %s \n", g.name, sender)
@@ -118,6 +115,6 @@ func (g *Gossiper) peerMessageHandler(msg utils.GossipPacket, sender string) {
 		fmt.Printf("%s: Got block publish from %s \n", g.name, sender)
 		g.blockPublishHandler(*msg.BlockPublish, sender)
 	} else {
-		fmt.Printf("\n\nWHAT'S THIS PEER MESSAGE SUPPOSED TO BE?.\n\n\n")
+		fmt.Printf("\n\nYOUR PEER MESSAGE:\n%+v\nWHAT'S THIS SUPPOSED TO BE? NOT PROPAGATING THIS.\n\n\n", msg)
 	}
 }

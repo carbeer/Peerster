@@ -8,10 +8,10 @@ import (
 )
 
 func (g *Gossiper) AntiEntropy() {
-	var peer string
+	fmt.Printf("Starting anti entropy messages with frequency %fs\n", utils.ANTI_ENTROPY_FREQUENCY.Seconds())
 	for {
-		<-time.After(utils.GetAntiEntropyFrequency())
-		peer = g.pickRandomPeerForMongering("")
+		<-time.After(utils.ANTI_ENTROPY_FREQUENCY)
+		peer := g.pickRandomPeerForMongering("")
 		go g.sendAcknowledgement(peer)
 	}
 }
@@ -25,11 +25,8 @@ func (g *Gossiper) RouteRumor(rtimer string) {
 	for {
 		rumorMessage := utils.RumorMessage{Origin: g.name, ID: g.idCounter}
 		g.idCounter = g.idCounter + 1
-		g.addToKnownMessages(rumorMessage)
+		g.appendReceivedMessages(rumorMessage.Origin, rumorMessage)
 		go g.startRumorMongering(rumorMessage)
-		fmt.Println(time.Now().Second())
 		<-time.After(duration)
-		fmt.Println(time.Now().Second())
-
 	}
 }

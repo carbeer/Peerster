@@ -62,7 +62,7 @@ func (g *Gossiper) searchForOwnedFiles(msg utils.SearchRequest) utils.SearchRepl
 			}
 		}
 	}
-	return utils.SearchReply{Origin: g.name, Destination: msg.Origin, HopLimit: utils.GetHopLimitConstant(), Results: results}
+	return utils.SearchReply{Origin: g.name, Destination: msg.Origin, HopLimit: utils.HOPLIMIT_CONSTANT, Results: results}
 }
 
 func (g *Gossiper) getAvailableChunks(file utils.File) ([]uint64, uint64) {

@@ -70,7 +70,7 @@ type Gossiper struct {
 func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []string, simple bool) *Gossiper {
 	udpAddr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", gossipIp, gossipPort))
 	udpConn, _ := net.ListenUDP("udp4", udpAddr)
-	clientAddr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", utils.GetClientIp(), clientPort))
+	clientAddr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", utils.CLIENT_IP, clientPort))
 	clientConn, _ := net.ListenUDP("udp4", clientAddr)
 	return &Gossiper{
 		Address:                   *udpAddr,
@@ -118,7 +118,7 @@ func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []stri
 
 func (g *Gossiper) sendToPeer(gossipPacket utils.GossipPacket, targetIpPort string) {
 	if targetIpPort == "" {
-		fmt.Printf("No target address given. We don't seem to know that peer.\n")
+		fmt.Printf("No target address given. Not sending this message: %+v.\n", gossipPacket)
 		return
 	}
 	if gossipPacket.Rumor != nil {
@@ -143,7 +143,6 @@ func (g *Gossiper) broadcastMessage(packet utils.GossipPacket, receivedFrom stri
 		if p != receivedFrom {
 			wg.Add(1)
 			go func(p string) {
-				// fmt.Printf("%d: Broadcasting\n", time.Now().Second())
 				g.sendToPeer(packet, p)
 				wg.Done()
 			}(p)
@@ -153,6 +152,9 @@ func (g *Gossiper) broadcastMessage(packet utils.GossipPacket, receivedFrom stri
 }
 
 func (g *Gossiper) addPeerToListIfApplicable(adr string) {
+	if adr == "" {
+		return
+	}
 	for i := range g.peers {
 		if g.peers[i] == adr {
 			return
