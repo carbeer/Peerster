@@ -3,6 +3,7 @@ $(document).ready(function () {
   getPeers();
   getKnownOrigins();
   fetchId();
+  getAvailableFiles();
 
   $("#sendMessage").on("click", function () {
     sendMessage();
@@ -124,19 +125,7 @@ function getKnownOrigins() {
     url: "/origins",
     type: "GET",
     success: function (data) {
-      origin = JSON.parse(data).split("\n")
-      $('#downloadOrigin', '#privateMessageOrigin').each(function () {
-        $(this).empty()
-        origin.forEach(elem => {
-          if (elem != "") {
-            $(this).append($('<option>', {
-              id: elem,
-              value: elem,
-              text: elem
-            }));
-          }
-        });
-      });
+      updateDirectPeers(data)
     },
     complete: function () {
       setTimeout(getKnownOrigins, 5000);
@@ -144,9 +133,28 @@ function getKnownOrigins() {
   });
 }
 
+function updateDirectPeers(data) {
+  origin = JSON.parse(data).split("\n")
+  $('#downloadOrigin').empty();
+  $('#privateMessageOrigin').empty();
+  origin.forEach(elem => {
+    if (elem != "") {
+      $('#downloadOrigin').append($('<option>', {
+        id: elem,
+        value: elem,
+        text: elem
+      }));
+      $('#privateMessageOrigin').append($('<option>', {
+        id: elem,
+        value: elem,
+        text: elem
+      }));
+    }
+  });
+}
+
 function saveFile() {
   msg = new Message(null, null, $('input[type=file]').val().split('\\').pop(), null, null, null);
-  console.log("Saved " + JSON.stringify(msg));
   $.ajax({
     async: true,
     url: '/file',
@@ -189,6 +197,7 @@ function sendDownloadRequest() {
 }
 
 function openPrivateDialog(origin) {
+  this.privateMessagePeer = origin;
   document.getElementById("privateMessageDialog").style.display = "block";
   getPrivateMessages();
 }

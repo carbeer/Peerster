@@ -191,7 +191,7 @@ func (g *Gossiper) addChronPrivateMessage(value interface{}) {
 	if msg.Origin != g.name {
 		g.chronPrivateMessages[msg.Origin] = append(g.chronPrivateMessages[msg.Origin], utils.StoredMessage{Message: msg, Timestamp: time.Now()})
 	} else {
-		g.chronPrivateMessages[msg.Origin] = append(g.chronPrivateMessages[msg.Destination], utils.StoredMessage{Message: msg, Timestamp: time.Now()})
+		g.chronPrivateMessages[msg.Destination] = append(g.chronPrivateMessages[msg.Destination], utils.StoredMessage{Message: msg, Timestamp: time.Now()})
 	}
 	g.chronPrivateMessagesLock.Unlock()
 }
