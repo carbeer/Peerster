@@ -3,7 +3,6 @@ package gossiper
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/carbeer/Peerster/utils"
@@ -15,7 +14,6 @@ func (g *Gossiper) unmarshalAndForward(r *http.Request) {
 	var msg utils.Message
 	e := json.NewDecoder(r.Body).Decode(&msg)
 	utils.HandleError(e)
-	log.Printf("Got this: %+v\n", msg)
 	g.ClientMessageHandler(msg)
 }
 
@@ -124,7 +122,7 @@ func serveFavicon(w http.ResponseWriter, r *http.Request) {
 }
 
 func (g *Gossiper) BootstrapUI() {
-	log.Println("Starting UI on " + fmt.Sprintf("%s:%s", g.Address.IP, utils.UI_PORT))
+	fmt.Println("Starting UI on " + fmt.Sprintf("%s:%s", g.Address.IP, utils.UI_PORT))
 	r := mux.NewRouter()
 	r.SkipClean(true)
 	r.HandleFunc("/message", g.handleMessage).Methods("POST", "GET")

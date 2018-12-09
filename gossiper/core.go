@@ -162,12 +162,16 @@ func (g *Gossiper) addPeerToListIfApplicable(adr string) {
 	if adr == "" {
 		return
 	}
-	for i := range g.peers {
-		if g.peers[i] == adr {
-			return
+	if len(g.peers) == 0 || (len(g.peers) == 1 && g.peers[0] == "") {
+		g.peers = []string{adr}
+	} else {
+		for i := range g.peers {
+			if g.peers[i] == adr {
+				return
+			}
 		}
+		g.peers = append(g.peers, adr)
 	}
-	g.peers = append(g.peers, adr)
 }
 
 func (g *Gossiper) GetAllPeers() string {

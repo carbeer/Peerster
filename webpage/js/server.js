@@ -240,7 +240,6 @@ function downloadFile(metahash, name) {
     type: "POST",
     data: JSON.stringify(msg),
     complete: function () {
-      console.log("Downloaded file");
     }
   });
 }

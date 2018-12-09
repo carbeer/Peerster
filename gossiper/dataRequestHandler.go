@@ -26,10 +26,8 @@ func (g *Gossiper) sendDataRequest(msg utils.Message, destination string) {
 		g.sendToPeer(gossipMessage, g.getNextHop(destination).Address)
 		select {
 		case <-time.After(utils.DATA_REQUEST_TIMEOUT):
-			fmt.Printf("DATA REQUEST TIMEOUT\n")
 			continue
 		case <-response:
-			fmt.Printf("RECEIVED DATA CHUNK\n")
 			g.deleteDataRequestChannel(msg.Request)
 			return
 		}
@@ -45,7 +43,6 @@ func (g *Gossiper) dataRequestHandler(msg utils.DataRequest, sender string) {
 			return
 		}
 		gossipMessage := utils.GossipPacket{DataRequest: &msg}
-		// fmt.Printf("%d: Send the private message\n", time.Now().Second())
 		g.sendToPeer(gossipMessage, g.getNextHop(msg.Destination).Address)
 	}
 }

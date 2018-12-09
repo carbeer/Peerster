@@ -4,24 +4,19 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"time"
 
 	"github.com/carbeer/Peerster/utils"
 )
 
 func (g *Gossiper) searchReplyHandler(msg utils.SearchReply) {
 	if msg.Destination == g.name {
-		fmt.Println("Received a search reply")
 		g.getMatchingSearchRequests(msg)
 	} else {
 		msg.HopLimit -= 1
 		if msg.HopLimit <= 0 {
-			fmt.Printf("%s: ATTENTION: Dropping a search reply message for %s\n", g.name, msg.Destination)
 			return
 		}
 		gossipMessage := utils.GossipPacket{SearchReply: &msg}
-
-		fmt.Printf("%d: Send the search reply message\n", time.Now().Second())
 		g.sendToPeer(gossipMessage, g.getNextHop(msg.Destination).Address)
 	}
 }
@@ -60,9 +55,6 @@ func (g *Gossiper) getMatchingSearchRequests(key utils.SearchReply) {
 	}
 	g.cachedSearchRequestsLock.Unlock()
 }
-
-// Get matching searchrequests
-// update external files --> set reference on chronological search requests
 
 // Updates externalFiles and returns the number of **new** matches
 func (g *Gossiper) updateExternalFile(key utils.SearchResult, value string, request utils.SearchRequest) uint32 {
@@ -103,8 +95,6 @@ func (g *Gossiper) updateExternalFile(key utils.SearchResult, value string, requ
 	g.externalFilesLock.Unlock()
 	if found {
 		fmt.Printf("FOUND match %s at %s metafile=%s chunks=%s\n", key.FileName, value, utils.StringHash(key.MetafileHash), strings.Trim(fmt.Sprint(key.ChunkMap), "[]"))
-	} else {
-		fmt.Printf("No match found for result %+v\n", key)
 	}
 	return matches
 }

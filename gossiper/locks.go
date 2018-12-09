@@ -328,7 +328,6 @@ func (g *Gossiper) inPendingTransactions(key utils.TxPublish) bool {
 func (g *Gossiper) addPendingTransaction(key utils.TxPublish) {
 	g.chainLock.Lock()
 	g.pendingTransactions = append(g.pendingTransactions, key)
-	fmt.Printf("Appending the following transaction %+v\n", key)
 	// notify miner
 	g.miner <- true
 	g.chainLock.Unlock()

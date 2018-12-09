@@ -52,9 +52,7 @@ func (g *Gossiper) searchForOwnedFiles(msg utils.SearchRequest) utils.SearchRepl
 	for _, v := range g.storedFiles {
 		for _, name := range msg.Keywords {
 			if strings.Contains(v.Name, name) {
-				fmt.Printf("%s contains %s\n", v.Name, name)
 				chunkMap, chunkCount := g.getAvailableChunks(v)
-				fmt.Printf("Have the following chunks available %v\n", chunkMap)
 				results = append(results, &utils.SearchResult{FileName: v.Name, MetafileHash: v.MetafileHash, ChunkMap: chunkMap, ChunkCount: chunkCount})
 				fmt.Println("Found the following files: ")
 				fmt.Printf("%+v", &utils.SearchResult{FileName: v.Name, MetafileHash: v.MetafileHash, ChunkMap: chunkMap, ChunkCount: chunkCount})
@@ -72,7 +70,6 @@ func (g *Gossiper) getAvailableChunks(file utils.File) ([]uint64, uint64) {
 	for ; utils.GetHashAtIndex(metaFile, i) != nil; i++ {
 		if !reflect.ValueOf(g.getStoredChunk(utils.StringHash(utils.GetHashAtIndex(metaFile, i)))).IsNil() {
 			chunkMap = append(chunkMap, uint64(i+1))
-			fmt.Println("Found chunk", (i + 1))
 		}
 	}
 	return chunkMap, uint64(i)
