@@ -14,13 +14,17 @@ func (g *Gossiper) MineBlocks() {
 	var sleepingTime time.Duration
 	firstMinedBlock := true
 
+Loop:
 	for {
+
 		for len(g.getPendingTransactions()) == 0 {
 			fmt.Println("Pause mining. Waiting for new transactions")
 			// Block until new transactions to be mined are available
 			<-g.miner
 			fmt.Println("Resume mining.")
 		}
+
+		startTime := time.Now()
 		lastBlock = g.getLastBlock().Block
 
 		if firstMinedBlock {
@@ -29,61 +33,45 @@ func (g *Gossiper) MineBlocks() {
 			block = utils.Block{Transactions: g.getPendingTransactions(), PrevHash: lastBlock.Hash(), Nonce: utils.GetRandomNonce()}
 		}
 
-		startTime := time.Now()
 		for !utils.ValidateBlockHash(block) {
 			select {
 			case <-g.miner:
-				lastBlock = g.getLastBlock().Block
-				fmt.Println("Updating block. Last block hash ", utils.FixedStringHash(lastBlock.Hash()))
-				if firstMinedBlock {
-					block = utils.Block{Transactions: g.getPendingTransactions(), PrevHash: [32]byte{0}, Nonce: utils.GetRandomNonce()}
-				} else {
-					block = utils.Block{Transactions: g.getPendingTransactions(), PrevHash: lastBlock.Hash(), Nonce: utils.GetRandomNonce()}
-				}
-				break
+				continue Loop
 			default:
 				block.Nonce = utils.NextNonce(block.Nonce)
 			}
 		}
+		fmt.Printf("FOUND-BLOCK %s\n", utils.FixedStringHash(block.Hash()))
+
 		// Sleep twice the mining time
 		if firstMinedBlock {
 			sleepingTime = 5 * time.Second
 		} else {
 			sleepingTime = 2 * time.Since(startTime)
 		}
-		fmt.Printf("Found a block. Sleeping %f seconds.\n", sleepingTime.Seconds())
-		<-time.After(sleepingTime)
-		g.proposeBlock(utils.BlockPublish{Block: block, HopLimit: utils.BLOCK_PUBLISH_HOP_LIMIT})
+		go g.proposeBlock(utils.BlockPublish{Block: block, HopLimit: utils.BLOCK_PUBLISH_HOP_LIMIT}, sleepingTime)
+		g.updateBlockChain(block, false)
 		firstMinedBlock = false
 	}
 }
 
-func (g *Gossiper) proposeBlock(msg utils.BlockPublish) {
-	fmt.Printf("FOUND-BLOCK [%s]\n", utils.FixedStringHash(msg.Block.Hash()))
+func (g *Gossiper) proposeBlock(msg utils.BlockPublish, sleep time.Duration) {
+	fmt.Printf("Sleeping %f seconds before broadcasting new block.\n", sleep.Seconds())
+	<-time.After(sleep)
+	fmt.Printf("Broadcasting %s now\n", utils.FixedStringHash(msg.Block.Hash()))
 	g.broadcastMessage(utils.GossipPacket{BlockPublish: &msg}, "")
-	g.updateBlockChain(msg.Block)
 }
 
-func (g *Gossiper) blockPublishHandler(msg utils.BlockPublish, sender string) {
-	if !g.ValidateBlock(msg.Block) {
-		return
-	}
-	g.updateBlockChain(msg.Block)
-	msg.HopLimit--
-	if msg.HopLimit > 0 {
-		g.broadcastMessage(utils.GossipPacket{BlockPublish: &msg}, sender)
-	}
-}
+func (g *Gossiper) updateBlockChain(key utils.Block, locked bool) {
+	fmt.Printf("The block %s to be appended contains the following transactions: %+v\n", utils.FixedStringHash(key.Hash()), key.Transactions)
 
-func (g *Gossiper) updateBlockChain(key utils.Block) {
-	g.chainLock.Lock()
-	defer g.chainLock.Unlock()
+	if !locked {
+		g.chainLock.Lock()
+		defer g.chainLock.Unlock()
+	}
 	prevBlock := g.blockHistory[key.PrevHash]
 
-	if prevBlock.Counter == 0 && key.PrevHash != [32]byte{0} {
-		fmt.Printf("Don't know the parent block, dropping block %s.\n", utils.FixedStringHash(key.Hash()))
-		return
-	} else if g.blockHistory[key.Hash()].Counter != 0 {
+	if g.blockHistory[key.Hash()].Counter != 0 {
 		fmt.Printf("Not a new block: %s\n", utils.FixedStringHash(key.Hash()))
 		return
 	}
@@ -93,34 +81,49 @@ func (g *Gossiper) updateBlockChain(key utils.Block) {
 		fmt.Println("This is the longest chain")
 		g.removePendingTransactions(key, true)
 	} else if prevBlock.Counter+1 <= g.lastBlock.Counter {
-		fmt.Printf("FORK-SHORTER %s\n", utils.FixedStringHash(key.Hash()))
-		fmt.Printf("Last block hash: %s but this block is pointing to %s\n", utils.FixedStringHash(g.lastBlock.Block.Hash()), utils.FixedStringHash(key.PrevHash))
+		g.checkNewFork(key, true)
 		return
 	} else {
-		rewind := g.resolveFork(key, true)
-		fmt.Printf("FORK-LONGER rewind %d blocks\n", rewind)
+		g.resolveFork(key, true)
+
 	}
 
 	g.lastBlock = utils.BlockWrapper{Block: key, Counter: prevBlock.Counter + 1}
-	currBlock := g.lastBlock.Block
 	// notify miner
 	g.miner <- true
-	fmt.Printf("CHAIN [%s]", utils.FixedStringHash(currBlock.Hash()))
-	for currBlock.PrevHash != [32]byte{0} {
-		fmt.Printf(" [%s]", utils.FixedStringHash(currBlock.PrevHash))
-		currBlock = g.blockHistory[currBlock.PrevHash].Block
+	g.printChain()
+
+	if g.detachedBlocks[key.Hash()].PrevHash == key.Hash() {
+		fmt.Printf("Found detached block that can be used now.")
+		detBlock := g.detachedBlocks[key.Hash()]
+		delete(g.detachedBlocks, key.Hash())
+		g.blockPublishHandler(utils.BlockPublish{Block: detBlock, HopLimit: 0}, "")
 	}
-	fmt.Print("\n")
 }
 
-func (g *Gossiper) resolveFork(msg utils.Block, lock bool) int {
-	if !lock {
+func (g *Gossiper) checkNewFork(msg utils.Block, locked bool) {
+	parent := g.blockHistory[msg.PrevHash]
+	currBlock := g.lastBlock
+
+	for currBlock.Counter > parent.Counter {
+		currBlock = g.blockHistory[currBlock.Block.PrevHash]
+	}
+
+	if currBlock.Block.Hash() == parent.Block.Hash() {
+		fmt.Printf("FORK-SHORTER %s\n", utils.FixedStringHash(currBlock.Hash()))
+	}
+	fmt.Printf("Highest known count: %d This block has a counter of %d\n", g.lastBlock.Counter, parent.Counter+1)
+}
+
+func (g *Gossiper) resolveFork(msg utils.Block, locked bool) {
+	if !locked {
 		g.chainLock.Lock()
 		defer g.chainLock.Unlock()
 	}
 	forkBlock := g.blockHistory[msg.PrevHash].Block // has to be equal to the highest counter of the prviously longest chain
 	chainBlock := g.lastBlock.Block
 	count := 0
+
 	for ; ; count++ {
 		// Add all transactions that are now in orphaned fork back to the pending pool
 	Loop:
@@ -133,7 +136,7 @@ func (g *Gossiper) resolveFork(msg utils.Block, lock bool) int {
 			g.pendingTransactions = append(g.pendingTransactions, v)
 		}
 		// Remove all transactions from pending that are part of the new chain
-		g.removePendingTransactions(forkBlock, true)
+		g.removePendingTransactions(msg, true)
 
 		if chainBlock.PrevHash == forkBlock.PrevHash {
 			break
@@ -141,7 +144,7 @@ func (g *Gossiper) resolveFork(msg utils.Block, lock bool) int {
 		chainBlock = g.blockHistory[chainBlock.PrevHash].Block
 		forkBlock = g.blockHistory[forkBlock.PrevHash].Block
 	}
-	return count + 1
+	fmt.Printf("FORK-LONGER rewind %d blocks\n", count+1)
 }
 
 func (g *Gossiper) removePendingTransactions(key utils.Block, locked bool) {
@@ -150,10 +153,11 @@ func (g *Gossiper) removePendingTransactions(key utils.Block, locked bool) {
 		defer g.chainLock.Unlock()
 	}
 	newPending := []utils.TxPublish{}
+	fmt.Printf("Block contains transactions %+v\n", key.Transactions)
+	fmt.Printf("Transactions still pending: %+v\n", g.pendingTransactions)
 Loop:
 	for _, pending := range g.pendingTransactions {
 		for _, mined := range key.Transactions {
-			fmt.Printf("Block contains transaction %+v\n", mined)
 			if pending.File.Name == mined.File.Name {
 				fmt.Printf("Transaction %+v is part of the block already\n", pending)
 				continue Loop
@@ -166,25 +170,48 @@ Loop:
 	fmt.Printf("New pending transactions: %+v\n", g.pendingTransactions)
 }
 
-func (g *Gossiper) ValidateBlock(block utils.Block) bool {
-	g.chainLock.Lock()
-	defer g.chainLock.Unlock()
-
-	if !utils.ValidateBlockHash(block) {
-		return false
+func (g *Gossiper) ValidateHistory(block utils.Block, locked bool) bool {
+	if !locked {
+		g.chainLock.Lock()
+		defer g.chainLock.Unlock()
 	}
 
+	// Check whether the transactions within the block are unique within the chain
 	for _, v := range block.Transactions {
-		// Iterate through all blocks in its chain
 		currentBlock := g.blockHistory[block.PrevHash].Block
-		for currentBlock.PrevHash != [32]byte{} {
+		for {
 			for _, mined := range currentBlock.Transactions {
 				if mined.File.Name == v.File.Name {
+					fmt.Printf("File %s is already present in previous block %s. Block %s is therefore corrupted\n", mined.File.Name, utils.FixedStringHash(currentBlock.Hash()), utils.FixedStringHash(block.Hash()))
 					return false
 				}
+			}
+			if currentBlock.PrevHash == [32]byte{0} {
+				break
 			}
 			currentBlock = g.blockHistory[currentBlock.PrevHash].Block
 		}
 	}
 	return true
+}
+
+func (g *Gossiper) printChain() {
+	currBlock := g.lastBlock.Block
+	fmt.Print("CHAIN")
+	for {
+		fmt.Printf(" %s", utils.FixedStringHash(currBlock.Hash()))
+		fmt.Printf(":%s", utils.FixedStringHash(currBlock.PrevHash))
+		for ix, trans := range currBlock.Transactions {
+			if ix == 0 {
+				fmt.Printf(":%s", trans.File.Name)
+			} else {
+				fmt.Printf(",%s", trans.File.Name)
+			}
+		}
+		if currBlock.PrevHash == [32]byte{0} {
+			break
+		}
+		currBlock = g.blockHistory[currBlock.PrevHash].Block
+	}
+	fmt.Print("\n")
 }

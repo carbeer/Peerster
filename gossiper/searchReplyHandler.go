@@ -95,7 +95,6 @@ func (g *Gossiper) updateExternalFile(key utils.SearchResult, value string, requ
 			found = true
 
 			if g.externalFiles[utils.StringHash(key.MetafileHash)].MissingChunksUntilMatch == 0 {
-				fmt.Printf("Found all chunks for file %s :-)\n", utils.StringHash(key.MetafileHash))
 				g.addChronReceivedFiles(g.externalFiles[utils.StringHash(key.MetafileHash)])
 				matches += 1
 			}
@@ -103,7 +102,7 @@ func (g *Gossiper) updateExternalFile(key utils.SearchResult, value string, requ
 	}
 	g.externalFilesLock.Unlock()
 	if found {
-		fmt.Printf("FOUND match %s at node %s metafile=%s chunks=%s\n", key.FileName, value, utils.StringHash(key.MetafileHash), strings.Trim(fmt.Sprint(key.ChunkMap), "[]"))
+		fmt.Printf("FOUND match %s at %s metafile=%s chunks=%s\n", key.FileName, value, utils.StringHash(key.MetafileHash), strings.Trim(fmt.Sprint(key.ChunkMap), "[]"))
 	} else {
 		fmt.Printf("No match found for result %+v\n", key)
 	}

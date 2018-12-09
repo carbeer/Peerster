@@ -227,10 +227,8 @@ function searchRequest() {
     data: JSON.stringify(msg),
     success: function () {
       $('#searchRequestKeywords').empty();
-    },
-    complete: function () {
       getAvailableFiles();
-    }
+    },
   });
 }
 

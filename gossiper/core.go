@@ -3,6 +3,7 @@ package gossiper
 import (
 	"fmt"
 	"net"
+	"strings"
 	"sync"
 
 	"github.com/carbeer/Peerster/utils"
@@ -44,10 +45,13 @@ type Gossiper struct {
 	storedFiles  map[string]utils.File
 	storedChunks map[string][]byte
 	// The next hash to be requested given the current hash
-	requestedChunks     map[string]utils.ChunkInfo
-	blockHistory        map[[32]byte]utils.BlockWrapper
+	requestedChunks map[string]utils.ChunkInfo
+	blockHistory    map[[32]byte]utils.BlockWrapper
+	// Get block by hash of the previour block
+	detachedBlocks      map[[32]byte]utils.Block
 	lastBlock           utils.BlockWrapper
 	pendingTransactions []utils.TxPublish
+	receivedBlock       bool
 
 	// Locks for maps
 	receivedMessagesLock      sync.RWMutex
@@ -73,31 +77,34 @@ func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []stri
 	clientAddr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", utils.CLIENT_IP, clientPort))
 	clientConn, _ := net.ListenUDP("udp4", clientAddr)
 	return &Gossiper{
-		Address:                   *udpAddr,
-		udpConn:                   *udpConn,
-		ClientConn:                *clientConn,
-		name:                      name,
-		peers:                     peers,
-		simple:                    simple,
-		idCounter:                 uint32(1),
-		ReceivedMessages:          make(map[string][]utils.RumorMessage),
-		PrivateMessages:           make(map[string][]utils.PrivateMessage),
-		rumorMongeringChannel:     make(map[string]chan utils.StatusPacket, 10240),
-		nextHop:                   make(map[string]utils.HopInfo),
-		storedFiles:               make(map[string]utils.File),
-		storedChunks:              make(map[string][]byte),
-		requestedChunks:           make(map[string]utils.ChunkInfo),
-		dataRequestChannel:        make(map[string]chan bool),
-		destinationSpecified:      make(map[string]bool),
-		searchRequestChannel:      make(map[string]chan uint32),
-		chronRumorMessages:        []utils.StoredMessage{},
-		chronPrivateMessages:      make(map[string][]utils.StoredMessage),
-		CachedSearchRequests:      make(map[string]utils.CachedRequest),
-		chronReceivedFiles:        []*utils.ExternalFile{},
-		externalFiles:             make(map[string]*utils.ExternalFile),
-		blockHistory:              make(map[[32]byte]utils.BlockWrapper),
-		lastBlock:                 utils.BlockWrapper{},
-		miner:                     make(chan bool, 1024),
+		Address:               *udpAddr,
+		udpConn:               *udpConn,
+		ClientConn:            *clientConn,
+		name:                  name,
+		peers:                 peers,
+		simple:                simple,
+		idCounter:             uint32(1),
+		ReceivedMessages:      make(map[string][]utils.RumorMessage),
+		PrivateMessages:       make(map[string][]utils.PrivateMessage),
+		rumorMongeringChannel: make(map[string]chan utils.StatusPacket, 10240),
+		nextHop:               make(map[string]utils.HopInfo),
+		storedFiles:           make(map[string]utils.File),
+		storedChunks:          make(map[string][]byte),
+		requestedChunks:       make(map[string]utils.ChunkInfo),
+		dataRequestChannel:    make(map[string]chan bool),
+		destinationSpecified:  make(map[string]bool),
+		searchRequestChannel:  make(map[string]chan uint32),
+		chronRumorMessages:    []utils.StoredMessage{},
+		chronPrivateMessages:  make(map[string][]utils.StoredMessage),
+		CachedSearchRequests:  make(map[string]utils.CachedRequest),
+		chronReceivedFiles:    []*utils.ExternalFile{},
+		externalFiles:         make(map[string]*utils.ExternalFile),
+		blockHistory:          make(map[[32]byte]utils.BlockWrapper),
+		lastBlock:             utils.BlockWrapper{},
+		miner:                 make(chan bool, 1024),
+		detachedBlocks:        make(map[[32]byte]utils.Block),
+		receivedBlock:         false,
+
 		receivedMessagesLock:      sync.RWMutex{},
 		privateMessagesLock:       sync.RWMutex{},
 		rumorMongeringChannelLock: sync.RWMutex{},
@@ -164,16 +171,12 @@ func (g *Gossiper) addPeerToListIfApplicable(adr string) {
 }
 
 func (g *Gossiper) GetAllPeers() string {
-	allPeers := ""
-	for _, peer := range g.peers {
-		allPeers = allPeers + peer + "\n"
-	}
-	return allPeers
+	return strings.Join(g.peers, "\n")
 }
 
 func (g *Gossiper) GetAllOrigins() string {
-	allOrigins := ""
 	g.nextHopLock.RLock()
+	allOrigins := ""
 	for k, _ := range g.nextHop {
 		allOrigins = allOrigins + k + "\n"
 	}
