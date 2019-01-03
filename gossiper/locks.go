@@ -98,10 +98,10 @@ func (g *Gossiper) sendToDataRequestChannel(key string, value bool) {
 func (g *Gossiper) getNextHop(key string) utils.HopInfo {
 	var val utils.HopInfo
 	g.nextHopLock.RLock()
-	if key == g.name {
+	if key == g.Name {
 		val = utils.HopInfo{Address: g.Address.String()}
 	} else {
-		val = g.nextHop[key]
+		val = g.NextHop[key]
 	}
 	g.nextHopLock.RUnlock()
 	return val
@@ -109,33 +109,33 @@ func (g *Gossiper) getNextHop(key string) utils.HopInfo {
 
 func (g *Gossiper) setNextHop(key string, value utils.HopInfo) {
 	g.nextHopLock.Lock()
-	g.nextHop[key] = value
+	g.NextHop[key] = value
 	g.nextHopLock.Unlock()
 }
 
 func (g *Gossiper) getStoredFile(key string) utils.File {
 	g.storedFilesLock.RLock()
-	val := g.storedFiles[key]
+	val := g.StoredFiles[key]
 	g.storedFilesLock.RUnlock()
 	return val
 }
 
 func (g *Gossiper) setStoredFile(key string, value utils.File) {
 	g.storedFilesLock.Lock()
-	g.storedFiles[key] = value
+	g.StoredFiles[key] = value
 	g.storedFilesLock.Unlock()
 }
 
 func (g *Gossiper) getStoredChunk(key string) []byte {
 	g.storedChunksLock.RLock()
-	val := g.storedChunks[key]
+	val := g.StoredChunks[key]
 	g.storedChunksLock.RUnlock()
 	return val
 }
 
 func (g *Gossiper) addStoredChunk(key string, value []byte) {
 	g.storedChunksLock.Lock()
-	g.storedChunks[key] = value
+	g.StoredChunks[key] = value
 	g.storedChunksLock.Unlock()
 }
 
@@ -165,7 +165,7 @@ func (g *Gossiper) addChronRumorMessage(value interface{}) {
 	msg, _ := value.(*utils.RumorMessage)
 	// Filter route rumor messages
 	if msg.Text != "" {
-		g.chronRumorMessages = append(g.chronRumorMessages, utils.StoredMessage{Message: msg, Timestamp: time.Now()})
+		g.ChronRumorMessages = append(g.ChronRumorMessages, utils.StoredMessage{Message: msg, Timestamp: time.Now()})
 	}
 	g.chronRumorMessagesLock.Unlock()
 }
@@ -173,9 +173,9 @@ func (g *Gossiper) addChronRumorMessage(value interface{}) {
 func (g *Gossiper) getAllRumorMessages() string {
 	allMsg := ""
 	g.chronRumorMessagesLock.RLock()
-	for _, stored := range g.chronRumorMessages {
+	for _, stored := range g.ChronRumorMessages {
 		msg, _ := stored.Message.(*utils.RumorMessage)
-		if msg.Origin == g.name {
+		if msg.Origin == g.Name {
 			allMsg = fmt.Sprintf("%sYOU: %s\n", allMsg, msg.Text)
 		} else {
 			allMsg = fmt.Sprintf("%s%s: %s\n", allMsg, msg.Origin, msg.Text)
@@ -188,10 +188,10 @@ func (g *Gossiper) getAllRumorMessages() string {
 func (g *Gossiper) addChronPrivateMessage(value interface{}) {
 	g.chronPrivateMessagesLock.Lock()
 	msg, _ := value.(*utils.PrivateMessage)
-	if msg.Origin != g.name {
-		g.chronPrivateMessages[msg.Origin] = append(g.chronPrivateMessages[msg.Origin], utils.StoredMessage{Message: msg, Timestamp: time.Now()})
+	if msg.Origin != g.Name {
+		g.ChronPrivateMessages[msg.Origin] = append(g.ChronPrivateMessages[msg.Origin], utils.StoredMessage{Message: msg, Timestamp: time.Now()})
 	} else {
-		g.chronPrivateMessages[msg.Destination] = append(g.chronPrivateMessages[msg.Destination], utils.StoredMessage{Message: msg, Timestamp: time.Now()})
+		g.ChronPrivateMessages[msg.Destination] = append(g.ChronPrivateMessages[msg.Destination], utils.StoredMessage{Message: msg, Timestamp: time.Now()})
 	}
 	g.chronPrivateMessagesLock.Unlock()
 }
@@ -199,7 +199,7 @@ func (g *Gossiper) addChronPrivateMessage(value interface{}) {
 func (g *Gossiper) getAllPrivateMessages(dest string) string {
 	allMsg := ""
 	g.chronPrivateMessagesLock.RLock()
-	for _, stored := range g.chronPrivateMessages[dest] {
+	for _, stored := range g.ChronPrivateMessages[dest] {
 		msg, _ := stored.Message.(*utils.PrivateMessage)
 		if msg.Destination == dest {
 			allMsg = fmt.Sprintf("%sYOU: %s\n", allMsg, msg.Text)
@@ -266,8 +266,8 @@ func (g *Gossiper) sendToSearchRequestChannel(key utils.SearchRequest, value uin
 func (g *Gossiper) getChunkHolder(key string, chunkNr int) string {
 	var val string
 	g.externalFilesLock.RLock()
-	if !reflect.ValueOf(g.externalFiles[key]).IsNil() && len(g.externalFiles[key].Holder[chunkNr]) > 0 {
-		val = g.externalFiles[key].Holder[chunkNr][0]
+	if !reflect.ValueOf(g.ExternalFiles[key]).IsNil() && len(g.ExternalFiles[key].Holder[chunkNr]) > 0 {
+		val = g.ExternalFiles[key].Holder[chunkNr][0]
 	}
 	g.externalFilesLock.RUnlock()
 	return val
@@ -275,7 +275,7 @@ func (g *Gossiper) getChunkHolder(key string, chunkNr int) string {
 
 func (g *Gossiper) getChronReceivedFiles() []*utils.ExternalFile {
 	g.chronReceivedFilesLock.RLock()
-	val := g.chronReceivedFiles
+	val := g.ChronReceivedFiles
 	g.chronReceivedFilesLock.RUnlock()
 	return val
 }
@@ -283,7 +283,7 @@ func (g *Gossiper) getChronReceivedFiles() []*utils.ExternalFile {
 func (g *Gossiper) addChronReceivedFiles(value *utils.ExternalFile) {
 	g.chronReceivedFilesLock.Lock()
 
-	for _, v := range g.chronReceivedFiles {
+	for _, v := range g.ChronReceivedFiles {
 		if utils.StringHash(v.MetafileHash) == utils.StringHash(value.MetafileHash) {
 			// Already have this file, nothing to append
 			g.chronReceivedFilesLock.Unlock()
@@ -291,10 +291,10 @@ func (g *Gossiper) addChronReceivedFiles(value *utils.ExternalFile) {
 		}
 	}
 
-	if reflect.ValueOf(g.chronReceivedFiles).IsNil() {
-		g.chronReceivedFiles = []*utils.ExternalFile{value}
+	if reflect.ValueOf(g.ChronReceivedFiles).IsNil() {
+		g.ChronReceivedFiles = []*utils.ExternalFile{value}
 	} else {
-		g.chronReceivedFiles = append(g.chronReceivedFiles, value)
+		g.ChronReceivedFiles = append(g.ChronReceivedFiles, value)
 	}
 	g.chronReceivedFilesLock.Unlock()
 }
@@ -302,14 +302,14 @@ func (g *Gossiper) addChronReceivedFiles(value *utils.ExternalFile) {
 func (g *Gossiper) inBlockHistory(key utils.TxPublish) bool {
 	g.chainLock.Lock()
 	defer g.chainLock.Unlock()
-	currBlock := g.lastBlock
+	currBlock := g.LastBlock
 	for currBlock.Counter != 0 {
 		for _, v := range currBlock.Transactions {
 			if v.File.Name == key.File.Name {
 				return true
 			}
 		}
-		currBlock = g.blockHistory[currBlock.PrevHash] // next block
+		currBlock = g.BlockHistory[currBlock.PrevHash] // next block
 	}
 	return false
 }
@@ -317,7 +317,7 @@ func (g *Gossiper) inBlockHistory(key utils.TxPublish) bool {
 func (g *Gossiper) inPendingTransactions(key utils.TxPublish) bool {
 	g.chainLock.Lock()
 	defer g.chainLock.Unlock()
-	for _, v := range g.pendingTransactions {
+	for _, v := range g.PendingTransactions {
 		if v.File.Name == key.File.Name {
 			return true
 		}
@@ -327,7 +327,7 @@ func (g *Gossiper) inPendingTransactions(key utils.TxPublish) bool {
 
 func (g *Gossiper) addPendingTransaction(key utils.TxPublish) {
 	g.chainLock.Lock()
-	g.pendingTransactions = append(g.pendingTransactions, key)
+	g.PendingTransactions = append(g.PendingTransactions, key)
 	// notify miner
 	g.miner <- true
 	g.chainLock.Unlock()
@@ -335,14 +335,14 @@ func (g *Gossiper) addPendingTransaction(key utils.TxPublish) {
 
 func (g *Gossiper) getPendingTransactions() []utils.TxPublish {
 	g.chainLock.RLock()
-	val := g.pendingTransactions
+	val := g.PendingTransactions
 	g.chainLock.RUnlock()
 	return val
 }
 
 func (g *Gossiper) getLastBlock() utils.BlockWrapper {
 	g.chainLock.RLock()
-	val := g.lastBlock
+	val := g.LastBlock
 	g.chainLock.RUnlock()
 	return val
 }

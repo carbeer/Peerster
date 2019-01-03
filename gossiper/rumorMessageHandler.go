@@ -13,7 +13,7 @@ import (
 func (g *Gossiper) rumorMessageHandler(msg utils.RumorMessage, sender string) {
 	if msg.Text != "" {
 		fmt.Printf("RUMOR origin %s from %s ID %d contents %s\n", msg.Origin, sender, msg.ID, msg.Text)
-		fmt.Printf("PEERS %v\n", fmt.Sprint(strings.Join(g.peers, ",")))
+		fmt.Printf("PEERS %v\n", fmt.Sprint(strings.Join(g.Peers, ",")))
 	} else {
 		fmt.Printf("ROUTE RUMOR origin %s from %s ID %d\n", msg.Origin, sender, msg.ID)
 	}
@@ -21,7 +21,7 @@ func (g *Gossiper) rumorMessageHandler(msg utils.RumorMessage, sender string) {
 	var wg sync.WaitGroup
 
 	// Check whether the message is desired
-	if origin != g.name {
+	if origin != g.Name {
 		g.updateNextHop(msg, sender)
 		if len(g.getReceivedMessages(origin))+1 == int(msg.ID) {
 			g.appendReceivedMessages(msg.Origin, msg)
@@ -47,9 +47,9 @@ func (g *Gossiper) updateNextHop(msg utils.RumorMessage, sender string) {
 func (g *Gossiper) pickRandomPeerForMongering(origin string) string {
 	peer := ""
 	for {
-		newRand := rand.New(rand.NewSource(time.Now().UnixNano())).Intn(len(g.peers))
-		if g.peers[newRand] != origin && g.getRumorMongeringChannel(peer) == nil {
-			peer = g.peers[newRand]
+		newRand := rand.New(rand.NewSource(time.Now().UnixNano())).Intn(len(g.Peers))
+		if g.Peers[newRand] != origin && g.getRumorMongeringChannel(peer) == nil {
+			peer = g.Peers[newRand]
 			break
 		}
 	}

@@ -10,13 +10,13 @@ import (
 func (g *Gossiper) sendDataRequest(msg utils.Message, destination string) {
 	var dataRequest utils.DataRequest
 	hash := utils.ByteMetaHash(msg.Request)
-	dataRequest = utils.DataRequest{Origin: g.name, Destination: destination, HopLimit: utils.HOPLIMIT_CONSTANT, HashValue: hash}
+	dataRequest = utils.DataRequest{Origin: g.Name, Destination: destination, HopLimit: utils.HOPLIMIT_CONSTANT, HashValue: hash}
 
 	gossipMessage := utils.GossipPacket{DataRequest: &dataRequest}
 	if msg.FileName != "" {
 		g.setStoredFile(msg.Request, utils.File{Name: msg.FileName, MetafileHash: utils.ByteMetaHash(msg.Request)})
 		g.addRequestedChunks(msg.Request, utils.ChunkInfo{FileName: msg.FileName})
-		fmt.Printf("REQUESTING filename %s from %s hash %s\n", msg.FileName, destination, msg.Request)
+		fmt.Printf("REQUESTING fileName %s from %s hash %s\n", msg.FileName, destination, msg.Request)
 	}
 
 	response := make(chan bool, utils.MSG_BUFFER)
@@ -35,7 +35,7 @@ func (g *Gossiper) sendDataRequest(msg utils.Message, destination string) {
 }
 
 func (g *Gossiper) dataRequestHandler(msg utils.DataRequest, sender string) {
-	if msg.Destination == g.name {
+	if msg.Destination == g.Name {
 		g.newDataReplyMessage(msg, sender)
 	} else {
 		msg.HopLimit -= 1

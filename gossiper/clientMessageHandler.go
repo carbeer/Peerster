@@ -13,18 +13,18 @@ import (
 )
 
 func (g *Gossiper) newRumorMongeringMessage(msg utils.Message) {
-	rumorMessage := utils.RumorMessage{Origin: g.name, ID: g.idCounter, Text: msg.Text}
+	rumorMessage := utils.RumorMessage{Origin: g.Name, ID: g.IdCounter, Text: msg.Text}
 	fmt.Printf("New rumor mongering message %+v\n", rumorMessage)
-	g.idCounter = g.idCounter + 1
+	g.IdCounter = g.IdCounter + 1
 	g.appendReceivedMessages(rumorMessage.Origin, rumorMessage)
 	g.startRumorMongering(rumorMessage)
 }
 
 func (g *Gossiper) newPrivateMessage(msg utils.Message) {
-	privateMessage := utils.PrivateMessage{Origin: g.name, ID: 0, Text: msg.Text, Destination: msg.Destination, HopLimit: utils.HOPLIMIT_CONSTANT}
+	privateMessage := utils.PrivateMessage{Origin: g.Name, ID: 0, Text: msg.Text, Destination: msg.Destination, HopLimit: utils.HOPLIMIT_CONSTANT}
 	gossipMessage := utils.GossipPacket{Private: &privateMessage}
 	fmt.Printf("SENDING PRIVATE MESSAGE %s TO %s\n", msg.Text, msg.Destination)
-	g.appendPrivateMessages(g.name, privateMessage)
+	g.appendPrivateMessages(g.Name, privateMessage)
 	g.sendToPeer(gossipMessage, g.getNextHop(msg.Destination).Address)
 }
 
@@ -36,9 +36,9 @@ func (g *Gossiper) newSearchRequest(msg utils.Message) {
 
 	if msg.Budget < 0 {
 		defaultBudget = true
-		searchRequest = utils.SearchRequest{Origin: g.name, Budget: utils.DEFAULT_BUDGET, Keywords: msg.Keywords}
+		searchRequest = utils.SearchRequest{Origin: g.Name, Budget: utils.DEFAULT_BUDGET, Keywords: msg.Keywords}
 	} else {
-		searchRequest = utils.SearchRequest{Origin: g.name, Budget: uint64(msg.Budget), Keywords: msg.Keywords}
+		searchRequest = utils.SearchRequest{Origin: g.Name, Budget: uint64(msg.Budget), Keywords: msg.Keywords}
 	}
 	// Create a channel that is added to the list of searchRequests
 	g.setSearchRequestChannel(searchRequest, make(chan uint32, utils.MSG_BUFFER))
@@ -85,13 +85,13 @@ func (g *Gossiper) fulfilledQuery(msg utils.SearchRequest) bool {
 }
 
 func (g *Gossiper) newDataReplyMessage(msg utils.DataRequest, sender string) {
-	dataReplyMessage := utils.DataReply{Origin: g.name, Destination: msg.Origin, HopLimit: utils.HOPLIMIT_CONSTANT, HashValue: msg.HashValue, Data: g.getStoredChunk(hex.EncodeToString(msg.HashValue))}
+	dataReplyMessage := utils.DataReply{Origin: g.Name, Destination: msg.Origin, HopLimit: utils.HOPLIMIT_CONSTANT, HashValue: msg.HashValue, Data: g.getStoredChunk(hex.EncodeToString(msg.HashValue))}
 	gossipMessage := utils.GossipPacket{DataReply: &dataReplyMessage}
 
-	nextHop := g.getNextHop(dataReplyMessage.Destination)
-	if nextHop.HighestID != 0 {
-		fmt.Printf("Sending data reply %s to %s via %s\n", hex.EncodeToString(dataReplyMessage.HashValue), dataReplyMessage.Destination, nextHop.Address)
-		g.sendToPeer(gossipMessage, nextHop.Address)
+	NextHop := g.getNextHop(dataReplyMessage.Destination)
+	if NextHop.HighestID != 0 {
+		fmt.Printf("Sending data reply %s to %s via %s\n", hex.EncodeToString(dataReplyMessage.HashValue), dataReplyMessage.Destination, NextHop.Address)
+		g.sendToPeer(gossipMessage, NextHop.Address)
 	} else {
 		fmt.Printf("No next hop to %s. Sending data response for %s back to where it came from: %s\n", dataReplyMessage.Destination, hex.EncodeToString(dataReplyMessage.HashValue), sender)
 		g.sendToPeer(gossipMessage, sender)

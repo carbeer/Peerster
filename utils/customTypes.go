@@ -62,8 +62,8 @@ type BlockPublish struct {
 }
 
 type Block struct {
-	PrevHash     [32]byte
-	Nonce        [32]byte
+	PrevHash     Hash
+	Nonce        Hash
 	Transactions []TxPublish
 }
 
@@ -176,3 +176,5 @@ type StoredMessage struct {
 	Message   interface{}
 	Timestamp time.Time
 }
+
+type Hash [32]byte

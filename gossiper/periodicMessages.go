@@ -23,8 +23,8 @@ func (g *Gossiper) RouteRumor(rtimer string) {
 
 	// Send initial route rumor messages instantaneously, afterwards periodically.
 	for {
-		rumorMessage := utils.RumorMessage{Origin: g.name, ID: g.idCounter}
-		g.idCounter = g.idCounter + 1
+		rumorMessage := utils.RumorMessage{Origin: g.Name, ID: g.IdCounter}
+		g.IdCounter = g.IdCounter + 1
 		g.appendReceivedMessages(rumorMessage.Origin, rumorMessage)
 		go g.startRumorMongering(rumorMessage)
 		<-time.After(duration)

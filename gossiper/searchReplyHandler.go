@@ -9,7 +9,7 @@ import (
 )
 
 func (g *Gossiper) searchReplyHandler(msg utils.SearchReply) {
-	if msg.Destination == g.name {
+	if msg.Destination == g.Name {
 		g.getMatchingSearchRequests(msg)
 	} else {
 		msg.HopLimit -= 1
@@ -25,7 +25,7 @@ func (g *Gossiper) getMatchingSearchRequests(key utils.SearchReply) {
 
 	g.cachedSearchRequestsLock.Lock()
 	for _, v := range g.CachedSearchRequests {
-		if v.Request.Origin != g.name {
+		if v.Request.Origin != g.Name {
 			continue
 		}
 		for _, result := range key.Results {
@@ -62,32 +62,32 @@ func (g *Gossiper) updateExternalFile(key utils.SearchResult, value string, requ
 	found := false
 	g.externalFilesLock.Lock()
 	// Entirely new file
-	if reflect.ValueOf(g.externalFiles[utils.StringHash(key.MetafileHash)]).IsNil() {
+	if reflect.ValueOf(g.ExternalFiles[utils.StringHash(key.MetafileHash)]).IsNil() {
 		tmp := &utils.ExternalFile{MissingChunksUntilMatch: key.ChunkCount, File: utils.File{Name: key.FileName, MetafileHash: key.MetafileHash}, Holder: make([][]string, key.ChunkCount+1)}
 		for ix, _ := range tmp.Holder {
 			tmp.Holder[ix] = []string{}
 		}
 		tmp.Holder[0] = []string{value}
-		g.externalFiles[utils.StringHash(key.MetafileHash)] = tmp
+		g.ExternalFiles[utils.StringHash(key.MetafileHash)] = tmp
 		found = true
 	}
 	// corresponds to index within the slice
 	for _, val := range key.ChunkMap {
 		fmt.Printf("Searching for chunk %d\n", val)
 		// already known Chunk but new holder
-		if len(g.externalFiles[utils.StringHash(key.MetafileHash)].Holder[val]) > 0 && !utils.Contains(g.externalFiles[utils.StringHash(key.MetafileHash)].Holder[val], value) {
-			g.externalFiles[utils.StringHash(key.MetafileHash)].Holder[val] = append(g.externalFiles[utils.StringHash(key.MetafileHash)].Holder[val], value)
+		if len(g.ExternalFiles[utils.StringHash(key.MetafileHash)].Holder[val]) > 0 && !utils.Contains(g.ExternalFiles[utils.StringHash(key.MetafileHash)].Holder[val], value) {
+			g.ExternalFiles[utils.StringHash(key.MetafileHash)].Holder[val] = append(g.ExternalFiles[utils.StringHash(key.MetafileHash)].Holder[val], value)
 			found = true
 			// new Chunk
 		} else {
-			g.externalFiles[utils.StringHash(key.MetafileHash)].Holder[val] = []string{value}
-			tmp := g.externalFiles[utils.StringHash(key.MetafileHash)]
+			g.ExternalFiles[utils.StringHash(key.MetafileHash)].Holder[val] = []string{value}
+			tmp := g.ExternalFiles[utils.StringHash(key.MetafileHash)]
 			tmp.MissingChunksUntilMatch -= 1
-			g.externalFiles[utils.StringHash(key.MetafileHash)] = tmp
+			g.ExternalFiles[utils.StringHash(key.MetafileHash)] = tmp
 			found = true
 
-			if g.externalFiles[utils.StringHash(key.MetafileHash)].MissingChunksUntilMatch == 0 {
-				g.addChronReceivedFiles(g.externalFiles[utils.StringHash(key.MetafileHash)])
+			if g.ExternalFiles[utils.StringHash(key.MetafileHash)].MissingChunksUntilMatch == 0 {
+				g.addChronReceivedFiles(g.ExternalFiles[utils.StringHash(key.MetafileHash)])
 				matches += 1
 			}
 		}

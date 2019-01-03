@@ -22,3 +22,4 @@ const BLOCK_PUBLISH_HOP_LIMIT = uint32(20)
 const LEADING_ZEROES = 2
 const DOWNLOAD_FOLDER = "_Downloads"
 const SHARED_FOLDER = "_SharedFiles"
+const STATE_PATH = "./state"

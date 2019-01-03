@@ -11,7 +11,7 @@ import (
 func (g *Gossiper) statusMessageHandler(status utils.StatusPacket, sender string) {
 
 	fmt.Printf("STATUS from %s%s\n", sender, status.ToString())
-	fmt.Printf("PEERS %v\n", fmt.Sprint(strings.Join(g.peers, ",")))
+	fmt.Printf("PEERS %v\n", fmt.Sprint(strings.Join(g.Peers, ",")))
 
 	if g.getRumorMongeringChannel(sender) != nil {
 		fmt.Printf("Owner of the channel with %s\n", sender)

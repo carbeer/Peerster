@@ -27,19 +27,19 @@ func (g *Gossiper) searchRequestHandler(msg utils.SearchRequest, resend bool) {
 		return
 	}
 
-	perPeerBudget := int(msg.Budget) / len(g.peers)
-	remainder := int(msg.Budget) % len(g.peers)
+	perPeerBudget := int(msg.Budget) / len(g.Peers)
+	remainder := int(msg.Budget) % len(g.Peers)
 
 	gossipMessageLargeB := utils.GossipPacket{SearchRequest: &utils.SearchRequest{Origin: msg.Origin, Budget: uint64(perPeerBudget + remainder), Keywords: msg.Keywords}}
 	gossipMessageSmallB := utils.GossipPacket{SearchRequest: &utils.SearchRequest{Origin: msg.Origin, Budget: uint64(perPeerBudget), Keywords: msg.Keywords}}
 
 	// Randomize which peers will get the larger budget
-	for ix := range rand.Perm(len(g.peers)) {
+	for ix := range rand.Perm(len(g.Peers)) {
 		if remainder > 0 {
 			remainder--
-			g.sendToPeer(gossipMessageLargeB, g.peers[ix])
+			g.sendToPeer(gossipMessageLargeB, g.Peers[ix])
 		} else if perPeerBudget > 0 {
-			g.sendToPeer(gossipMessageSmallB, g.peers[ix])
+			g.sendToPeer(gossipMessageSmallB, g.Peers[ix])
 		} else {
 			break
 		}
@@ -49,7 +49,7 @@ func (g *Gossiper) searchRequestHandler(msg utils.SearchRequest, resend bool) {
 func (g *Gossiper) searchForOwnedFiles(msg utils.SearchRequest) utils.SearchReply {
 	results := []*utils.SearchResult{}
 
-	for _, v := range g.storedFiles {
+	for _, v := range g.StoredFiles {
 		for _, name := range msg.Keywords {
 			if strings.Contains(v.Name, name) {
 				chunkMap, chunkCount := g.getAvailableChunks(v)
@@ -60,7 +60,7 @@ func (g *Gossiper) searchForOwnedFiles(msg utils.SearchRequest) utils.SearchRepl
 			}
 		}
 	}
-	return utils.SearchReply{Origin: g.name, Destination: msg.Origin, HopLimit: utils.HOPLIMIT_CONSTANT, Results: results}
+	return utils.SearchReply{Origin: g.Name, Destination: msg.Origin, HopLimit: utils.HOPLIMIT_CONSTANT, Results: results}
 }
 
 func (g *Gossiper) getAvailableChunks(file utils.File) ([]uint64, uint64) {
@@ -80,11 +80,11 @@ func (g *Gossiper) getAvailableFileResults(keywords []string) []utils.FileSkelet
 	g.chronReceivedFilesLock.Lock()
 
 	if keywords == nil {
-		for _, v := range g.chronReceivedFiles {
+		for _, v := range g.ChronReceivedFiles {
 			results = append(results, utils.FileSkeleton{Name: v.File.Name, MetafileHash: utils.StringHash(v.File.MetafileHash)})
 		}
 	} else {
-		for _, v := range g.chronReceivedFiles {
+		for _, v := range g.ChronReceivedFiles {
 			if utils.Contains(keywords, v.Name) {
 				results = append(results, utils.FileSkeleton{Name: v.File.Name, MetafileHash: utils.StringHash(v.File.MetafileHash)})
 			}

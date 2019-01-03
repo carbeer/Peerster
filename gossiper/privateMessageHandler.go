@@ -7,7 +7,7 @@ import (
 )
 
 func (g *Gossiper) privateMessageHandler(msg utils.PrivateMessage) {
-	if msg.Destination == g.name {
+	if msg.Destination == g.Name {
 		fmt.Printf("PRIVATE origin %s hop-limit %d contents %s\n", msg.Origin, msg.HopLimit, msg.Text)
 		g.appendPrivateMessages(msg.Origin, msg)
 	} else {

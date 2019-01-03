@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"math/rand"
 	"net/http"
 	"os"
@@ -16,7 +17,7 @@ import (
 
 func HandleError(e error) {
 	if e != nil {
-		fmt.Println("General error", e)
+		log.Println("General error", e)
 		debug.PrintStack()
 	}
 }
@@ -64,6 +65,13 @@ func ByteMetaHash(hash string) []byte {
 	res, e := hex.DecodeString(hash)
 	HandleError(e)
 	return res
+}
+
+func FixedByteHash(hash string) (arr [32]byte) {
+	b := make([]byte, 32)
+	b = ByteMetaHash(hash)
+	copy(arr[:], b)
+	return
 }
 
 func StringHash(hash []byte) string {
@@ -158,4 +166,17 @@ func ValidateBlockHash(block Block) bool {
 		}
 	}
 	return true
+}
+
+func (h Hash) MarshalText() (text []byte, err error) {
+	return []byte(StringHash(text)), nil
+}
+
+func (h *Hash) UnmarshalText(text []byte) error {
+	var s string
+	if e := json.Unmarshal(text, &s); e != nil {
+		return e
+	}
+	*h = FixedByteHash(s)
+	return nil
 }

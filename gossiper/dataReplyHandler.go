@@ -11,7 +11,7 @@ import (
 )
 
 func (g *Gossiper) dataReplyHandler(msg utils.DataReply) {
-	if msg.Destination == g.name {
+	if msg.Destination == g.Name {
 		g.receiveDataReply(msg)
 	} else {
 		msg.HopLimit -= 1

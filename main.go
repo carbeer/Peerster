@@ -3,8 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
+	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/carbeer/Peerster/gossiper"
 )
@@ -17,6 +21,7 @@ var simple bool
 var quit chan bool
 var rtimer int
 var runUI bool
+var warmStart bool
 
 func main() {
 	flag.IntVar(&uiPort, "UIPort", 8080, "port for the UI client")
@@ -26,22 +31,29 @@ func main() {
 	peerList := flag.String("peers", "", "comma seperated list of peers of the form ip:port")
 	flag.BoolVar(&simple, "simple", false, "run gossiper in simple broadcast mode")
 	flag.BoolVar(&runUI, "runUI", false, "serve UI with this gossiper")
+	flag.BoolVar(&warmStart, "warmStart", false, "load a previous state from the disk for a warm start up")
 	flag.Parse()
 
 	elems := strings.Split(*tmp, ":")
 	gossipIp = elems[0]
 	gossipPort, _ = strconv.Atoi(elems[1])
 	peers = strings.Split(*peerList, ",")
-
+	fmt.Println("peers has value", peers)
 	fmt.Println("UIPort has value", uiPort)
 	fmt.Println("gossipAddr has value", *tmp)
 	fmt.Println("name has value", name)
-	fmt.Println("peers has value", peers)
 	fmt.Println("simple has value", simple)
 	fmt.Println("rtimer has value", rtimer)
 	fmt.Println("runUI has value", runUI)
+	fmt.Println("warmStart has value", warmStart)
 
-	g := gossiper.NewGossiper(gossipIp, name, gossipPort, uiPort, peers, simple)
+	var g *gossiper.Gossiper
+	if !warmStart {
+		g = gossiper.NewGossiper(gossipIp, name, gossipPort, uiPort, peers, simple)
+	} else {
+		g = gossiper.RestoreGossiper(gossipIp, name, gossipPort, uiPort, peers)
+		fmt.Println("Restored state of", name)
+	}
 
 	go g.ListenClientMessages()
 	go g.ListenPeerMessages()
@@ -58,5 +70,16 @@ func main() {
 		go g.BootstrapUI()
 	}
 	go g.MineBlocks()
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGTERM, syscall.SIGTERM)
+	go func() {
+		<-c
+		fmt.Println("Received a kill signal. Saving node state.")
+		g.SaveState()
+		log.Println("Saved state of node", name)
+		os.Exit(1)
+	}()
+	// Blocking call
 	<-quit
 }

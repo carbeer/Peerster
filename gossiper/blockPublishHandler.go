@@ -10,12 +10,12 @@ func (g *Gossiper) blockPublishHandler(msg utils.BlockPublish, sender string) {
 	g.chainLock.Lock()
 	defer g.chainLock.Unlock()
 
-	if g.blockHistory[msg.Block.PrevHash].Counter == 0 && msg.Block.PrevHash != [32]byte{0} {
-		if !g.receivedBlock && sender != g.name {
+	if g.BlockHistory[msg.Block.PrevHash].Counter == 0 && msg.Block.PrevHash != [32]byte{0} {
+		if !g.ReceivedBlock && sender != g.Name {
 			fmt.Printf("This is the first block we received but we don't have its parent\n")
 		} else {
 			fmt.Printf("Storing the block %s for later usage as parent %s is unknown\n", utils.FixedStringHash(msg.Block.Hash()), utils.FixedStringHash(msg.Block.PrevHash))
-			g.detachedBlocks[msg.Block.PrevHash] = msg.Block
+			g.DetachedBlocks[msg.Block.PrevHash] = msg.Block
 			return
 		}
 	}
@@ -32,7 +32,7 @@ func (g *Gossiper) blockPublishHandler(msg utils.BlockPublish, sender string) {
 	if msg.HopLimit > 0 {
 		g.broadcastMessage(utils.GossipPacket{BlockPublish: &msg}, sender)
 	}
-	if !g.receivedBlock && sender != g.name {
-		g.receivedBlock = true
+	if !g.ReceivedBlock && sender != g.Name {
+		g.ReceivedBlock = true
 	}
 }

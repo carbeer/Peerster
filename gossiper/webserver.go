@@ -64,7 +64,7 @@ func (g *Gossiper) handlePrivateMessage(w http.ResponseWriter, r *http.Request) 
 
 func (g *Gossiper) handleId(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
-		utils.MarshalAndWrite(w, g.name)
+		utils.MarshalAndWrite(w, g.Name)
 		return
 	}
 	utils.MarshalAndWrite(w, http.StatusMethodNotAllowed)
