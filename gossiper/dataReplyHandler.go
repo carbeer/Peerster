@@ -82,6 +82,7 @@ func (g *Gossiper) onMetaFileReception(metaFile []byte, hashValue []byte) {
 }
 
 func (g *Gossiper) reconstructFile(metaHash string) {
+	_ = os.Mkdir(fmt.Sprintf(".%s%s", string(os.PathSeparator), utils.DOWNLOAD_FOLDER), os.ModePerm)
 	file, e := os.Create(fmt.Sprintf(".%s%s%s%s", string(os.PathSeparator), utils.DOWNLOAD_FOLDER, string(os.PathSeparator), g.getStoredFile(metaHash).Name))
 	utils.HandleError(e)
 	defer file.Close()

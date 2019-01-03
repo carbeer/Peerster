@@ -1,11 +1,13 @@
 package gossiper
 
 import (
+	"crypto/rsa"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
+	"os"
 	"strings"
 	"sync"
 
@@ -16,17 +18,11 @@ import (
 type Gossiper struct {
 	// Address ip:port on which the Gossiper instance runs
 	Address net.UDPAddr
-	// UDP connection for peers
-	udpConn net.UDPConn
-	// Client connecteion (UI)
-	clientConn net.UDPConn
-	// Identifier of the Gossiper
-	Name string
+	Name    string
 	// Addresses of all peers
 	Peers     []string
 	Simple    bool
 	IdCounter uint32
-	miner     chan bool
 	// Sorted list of received messages
 	ReceivedMessages map[string][]utils.RumorMessage
 	PrivateMessages  map[string][]utils.PrivateMessage
@@ -36,25 +32,32 @@ type Gossiper struct {
 	ChronRumorMessages   []utils.StoredMessage
 	ChronPrivateMessages map[string][]utils.StoredMessage
 	ChronReceivedFiles   []*utils.ExternalFile
-
-	// Tracks the status packets from rumorMongerings owned by this peer
-	rumorMongeringChannel map[string]chan utils.StatusPacket
-	dataRequestChannel    map[string]chan bool
-	destinationSpecified  map[string]bool
-	searchRequestChannel  map[string]chan uint32
 	// next hop map Origin --> Address
 	NextHop map[string]utils.HopInfo
 	// Get utils.File by Metahash
 	StoredFiles  map[string]utils.File
 	StoredChunks map[string][]byte
-	// The next hash to be requested given the current hash
-	requestedChunks map[string]utils.ChunkInfo
-	BlockHistory    map[utils.Hash]utils.BlockWrapper
+	BlockHistory map[utils.Hash]utils.BlockWrapper
 	// Get block by hash of the previour block
 	DetachedBlocks      map[utils.Hash]utils.Block
 	LastBlock           utils.BlockWrapper
 	PendingTransactions []utils.TxPublish
 	ReceivedBlock       bool
+
+	// UDP connection for peers
+	udpConn net.UDPConn
+	// Client connecteion (UI)
+	clientConn net.UDPConn
+	// Identifier of the Gossiper
+	miner chan bool
+	// Tracks the status packets from rumorMongerings owned by this peer
+	rumorMongeringChannel map[string]chan utils.StatusPacket
+	dataRequestChannel    map[string]chan bool
+	destinationSpecified  map[string]bool
+	searchRequestChannel  map[string]chan uint32
+	// The next hash to be requested given the current hash
+	requestedChunks map[string]utils.ChunkInfo
+	privateKey      rsa.PrivateKey
 
 	// Locks for maps
 	receivedMessagesLock      sync.RWMutex
@@ -74,14 +77,14 @@ type Gossiper struct {
 	chainLock                 sync.RWMutex
 }
 
-func NewGossiper(gossipIp, Name string, gossipPort, clientPort int, peers []string, simple bool) *Gossiper {
+func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []string, simple bool) *Gossiper {
 	udpAddr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", gossipIp, gossipPort))
 	udpConn, _ := net.ListenUDP("udp4", udpAddr)
 	clientAddr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", utils.CLIENT_IP, clientPort))
 	clientConn, _ := net.ListenUDP("udp4", clientAddr)
-	return &Gossiper{
+	g := &Gossiper{
 		Address:              *udpAddr,
-		Name:                 Name,
+		Name:                 name,
 		Peers:                peers,
 		Simple:               simple,
 		ReceivedMessages:     make(map[string][]utils.RumorMessage),
@@ -125,10 +128,18 @@ func NewGossiper(gossipIp, Name string, gossipPort, clientPort int, peers []stri
 		externalFilesLock:         sync.RWMutex{},
 		chainLock:                 sync.RWMutex{},
 	}
+
+	if name == "" {
+		g.privateKey = *utils.GenerateKeyPair()
+		g.Name = utils.PublicKeyAsString(&g.privateKey)
+	} else {
+		log.Println("No RSA keys generated. Asymmetric encryption is therefore not supported.")
+	}
+	return g
 }
 
-func RestoreGossiper(gossipIp, Name string, gossipPort, clientPort int, peers []string) *Gossiper {
-	g := LoadState(Name)
+func RestoreGossiper(gossipIp, name string, gossipPort, clientPort int, peers []string) *Gossiper {
+	g := LoadState(name)
 	udpAddr, e := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", gossipIp, gossipPort))
 	utils.HandleError(e)
 	udpConn, e := net.ListenUDP("udp4", udpAddr)
@@ -168,6 +179,12 @@ func RestoreGossiper(gossipIp, Name string, gossipPort, clientPort int, peers []
 		g.addPeerToListIfApplicable(p)
 	}
 
+	privateKey, e := utils.LoadKey(name)
+	if e != nil || privateKey.Validate() != nil {
+		log.Println("No RSA keys available. Asymmetric encryption is therefore not supported.")
+	} else {
+		g.privateKey = *privateKey
+	}
 	return g
 }
 
@@ -239,6 +256,7 @@ func (g *Gossiper) GetAllOrigins() string {
 func (g *Gossiper) SaveState() {
 	obj, e := json.MarshalIndent(g, "", "\t")
 	utils.HandleError(e)
+	_ = os.Mkdir(utils.STATE_FOLDER, os.ModePerm)
 	e = ioutil.WriteFile(fmt.Sprint(utils.STATE_PATH, g.Name, ".json"), obj, 0644)
 	utils.HandleError(e)
 }
