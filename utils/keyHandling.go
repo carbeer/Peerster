@@ -4,12 +4,14 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
-	"encoding/base64"
+	"encoding/hex"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
+	"path/filepath"
+
+	"github.com/martinlindhe/base36"
 )
 
 func GenerateKeyPair() *rsa.PrivateKey {
@@ -21,15 +23,15 @@ func GenerateKeyPair() *rsa.PrivateKey {
 
 func PublicKeyAsString(privKey *rsa.PrivateKey) string {
 	pubKeyBytes := x509.MarshalPKCS1PublicKey(&privKey.PublicKey)
-	s := base64.URLEncoding.EncodeToString(pubKeyBytes)
+	s := hex.EncodeToString(pubKeyBytes)
 	return s
 }
 
 func StoreKey(privKey *rsa.PrivateKey) {
 	_ = os.Mkdir(KEY_FOLDER, os.ModePerm)
 	s := PublicKeyAsString(privKey)
-	log.Println(s)
-	f, e := os.Create(fmt.Sprint(KEY_FILE, s, ".pem"))
+	cwd, _ := os.Getwd()
+	f, e := os.Create(filepath.Join(cwd, KEY_FOLDER, fmt.Sprint(HexToBase36(s), ".pem")))
 	HandleError(e)
 	defer f.Close()
 
@@ -43,7 +45,8 @@ func StoreKey(privKey *rsa.PrivateKey) {
 }
 
 func LoadKey(pubKey string) (*rsa.PrivateKey, error) {
-	b, e := ioutil.ReadFile(fmt.Sprint(KEY_FILE, pubKey, ".pem"))
+	cwd, _ := os.Getwd()
+	b, e := ioutil.ReadFile(filepath.Join(cwd, KEY_FOLDER, fmt.Sprint(HexToBase36(pubKey), ".pem")))
 	if e != nil {
 		return nil, e
 	}
@@ -54,4 +57,10 @@ func LoadKey(pubKey string) (*rsa.PrivateKey, error) {
 		return nil, e
 	}
 	return privKey, privKey.Validate()
+}
+
+func HexToBase36(h string) string {
+	b, e := hex.DecodeString(h)
+	HandleError(e)
+	return base36.EncodeBytes(b)
 }

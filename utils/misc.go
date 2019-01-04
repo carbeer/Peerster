@@ -1,13 +1,16 @@
 package utils
 
 import (
+	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"math/rand"
 	"net/http"
 	"os"
@@ -179,4 +182,18 @@ func (h *Hash) UnmarshalText(text []byte) error {
 	}
 	*h = FixedByteHash(s)
 	return nil
+}
+
+func CeilIntDiv(a, b int) int {
+	return int(math.Ceil(float64(a) / float64(b)))
+}
+
+// The message must be no longer than the length of the public modulus minus twice the hash length, minus a further 2.
+func GetMaxEncodedChunkLength(pubKey *rsa.PublicKey) (int, error) {
+	ret := int(float64(pubKey.Size())/8 - float64(HASH_ALGO.Size())*2/8 - 2)
+	if ret <= 0 {
+		log.Printf("pubKey.Size() / 8 - HASH_ALGO.Size() / 8 - 2:\n %d / 8 - %d * 2 / 8 - 2 = %d\n", pubKey.Size(), HASH_ALGO.Size(), ret)
+		return 0, errors.New("You cannot encode any message with this setup.")
+	}
+	return ret, nil
 }

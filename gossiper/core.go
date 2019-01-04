@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -257,13 +258,15 @@ func (g *Gossiper) SaveState() {
 	obj, e := json.MarshalIndent(g, "", "\t")
 	utils.HandleError(e)
 	_ = os.Mkdir(utils.STATE_FOLDER, os.ModePerm)
-	e = ioutil.WriteFile(fmt.Sprint(utils.STATE_PATH, g.Name, ".json"), obj, 0644)
+	cwd, _ := os.Getwd()
+	e = ioutil.WriteFile(filepath.Join(cwd, utils.STATE_FOLDER, fmt.Sprint(g.Name, ".json")), obj, 0644)
 	utils.HandleError(e)
 }
 
 func LoadState(id string) *Gossiper {
 	g := Gossiper{}
-	f, e := ioutil.ReadFile(fmt.Sprint(utils.STATE_PATH, id, ".json"))
+	cwd, _ := os.Getwd()
+	f, e := ioutil.ReadFile(filepath.Join(cwd, utils.STATE_FOLDER, fmt.Sprint(id, ".json")))
 	utils.HandleError(e)
 	json.Unmarshal(f, &g)
 	log.Printf("Got this: %+v\n", &g)

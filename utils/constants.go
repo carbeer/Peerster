@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"crypto"
 	"time"
 )
 
@@ -24,6 +25,5 @@ const DOWNLOAD_FOLDER = "_Downloads"
 const SHARED_FOLDER = "_SharedFiles"
 const STATE_FOLDER = "_States"
 const KEY_FOLDER = "_Keys"
-const STATE_PATH = STATE_FOLDER + "/State"
-const KEY_LENGTH = 64
-const KEY_FILE = KEY_FOLDER + "/PrivateKey"
+const KEY_LENGTH = 550
+const HASH_ALGO = crypto.SHA1
