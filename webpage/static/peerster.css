@@ -13,3 +13,9 @@ input:required:invalid {
 .card-section {
     margin-bottom: 1rem
 }
+
+.alert-success {
+    word-wrap: break-word;   
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
