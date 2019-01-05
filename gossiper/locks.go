@@ -201,10 +201,21 @@ func (g *Gossiper) getAllPrivateMessages(dest string) string {
 	g.chronPrivateMessagesLock.RLock()
 	for _, stored := range g.ChronPrivateMessages[dest] {
 		msg, _ := stored.Message.(*utils.PrivateMessage)
+
 		if msg.Destination == dest {
-			allMsg = fmt.Sprintf("%sYOU: %s\n", allMsg, msg.Text)
+			if msg.Text != "" {
+				allMsg = fmt.Sprintf("%sYOU: %s\n", allMsg, msg.Text)
+			}
+			if msg.EncryptedText != "" {
+				allMsg = fmt.Sprintf("%sYOU (encrypted): %s\n", allMsg, msg.EncryptedText)
+			}
 		} else {
-			allMsg = fmt.Sprintf("%s%s: %s\n", allMsg, msg.Origin, msg.Text)
+			if msg.Text != "" {
+				allMsg = fmt.Sprintf("%s%s: %s\n", allMsg, msg.Origin, msg.Text)
+			}
+			if msg.EncryptedText != "" {
+				allMsg = fmt.Sprintf("%s%s (encrypted): %s\n", allMsg, msg.Origin, msg.EncryptedText)
+			}
 		}
 	}
 	g.chronPrivateMessagesLock.RUnlock()

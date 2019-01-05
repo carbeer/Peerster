@@ -19,11 +19,12 @@ type RumorMessage struct {
 }
 
 type PrivateMessage struct {
-	Origin      string
-	ID          uint32
-	Text        string
-	Destination string
-	HopLimit    uint32
+	Origin        string
+	ID            uint32
+	Text          string
+	EncryptedText string
+	Destination   string
+	HopLimit      uint32
 }
 
 type DataRequest struct {
@@ -49,6 +50,7 @@ type Message struct {
 	Keywords    []string `json:"keywords"`
 	Budget      int64    `json:"budget"`
 	Peer        string   `json:"peer"`
+	Encrypted   bool     `json:encrypted"`
 }
 
 type TxPublish struct {

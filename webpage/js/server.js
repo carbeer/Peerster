@@ -13,6 +13,10 @@ $(document).ready(function () {
     sendPrivateMessage();
   });
 
+  $("#sendPrivateEncryptedMessage").on("click", function() {
+    sendPrivateEncryptedMessage();
+  });
+
   $("#addNewPeer").on("click", function () {
     addPeer();
   });
@@ -53,7 +57,7 @@ function fetchId() {
 }
 
 function sendMessage() {
-  msg = new Message($("#message").val(), null, null, null, null, null, null);
+  msg = new Message($("#message").val(), null, null, null, null, null, null, null, null);
 
   $.ajax({
     url: "/message",
@@ -61,7 +65,7 @@ function sendMessage() {
     data: JSON.stringify(msg),
     contentType: "application/json",
     success: function (data) {
-      $("#message").val("Type your message here...");
+      $("#message").val("")
     },
   });
   getMessages();
@@ -94,14 +98,14 @@ function getPrivateMessages() {
 }
 
 function addPeer() {
-  msg = new Message(null, null, null, null, null, null, $("#peer").val());
+  msg = new Message(null, null, null, null, null, null, $("#peer").val(), null);
 
   $.ajax({
     url: "/node",
     type: "POST",
     data: JSON.stringify(msg),
     success: function (data) {
-      $("#peer").val("Type the peer here...");
+      $("#peer").val("");
     },
   });
   getPeers();
@@ -154,20 +158,20 @@ function updateDirectPeers(data) {
 }
 
 function saveFile() {
-  msg = new Message(null, null, $('input[type=file]').val().split('\\').pop(), null, null, null);
+  msg = new Message(null, null, $('input[type=file]').val().split('\\').pop(), null, null, null, null, null);
   $.ajax({
     async: true,
     url: '/file',
     type: 'POST',
     data: JSON.stringify(msg),
     success: function () {
-      $('input[type=file]').val('');
+      $('input[type=file]').val("");
     }
   });
 }
 
 function sendPrivateMessage() {
-  msg = new Message($("#privateMessage").val(), this.privateMessagePeer, null, null, null, null);
+  msg = new Message($("#privateMessage").val(), this.privateMessagePeer, null, null, null, null, null, null);
 
   $.ajax({
     async: false,
@@ -175,14 +179,29 @@ function sendPrivateMessage() {
     type: "POST",
     data: JSON.stringify(msg),
     success: function () {
-      $("#privateMessage").val("Type your message here...");
+      $("#privateMessage").val("");
     },
   });
   getPrivateMessages();
 }
 
+function sendPrivateEncryptedMessage() {
+  msg = new Message($("#privateEncryptedMessage").val(), this.privateMessagePeer, null, null, null, null, null, true);
+  $.ajax({
+    async: false,
+    url: "/privateMessage",
+    type: "POST",
+    data: JSON.stringify(msg),
+    success: function () {
+      $("#privateEncryptedMessage").val("");
+    },
+  });
+  getPrivateMessages();
+}
+
+
 function sendDownloadRequest() {
-  msg = new Message(null, $('#downloadOrigin option:selected').val(), $('#fileName').val(), $("#downloadHash").val(), null, null);
+  msg = new Message(null, $('#downloadOrigin option:selected').val(), $('#fileName').val(), $("#downloadHash, null").val(), null, null, null);
 
   $.ajax({
     async: false,
@@ -227,7 +246,7 @@ function getAvailableFiles() {
 }
 
 function searchRequest() {
-  msg = new Message(null, null, null, null, $('#searchRequestKeywords').val().split("\n"), -1, null);
+  msg = new Message(null, null, null, null, $('#searchRequestKeywords').val().split("\n, null"), -1, null, null);
 
   $.ajax({
     async: false,
@@ -242,8 +261,8 @@ function searchRequest() {
 }
 
 function downloadFile(metahash, name) {
-  msg = new Message(null, null, name, metahash, null, null, null);
-  $.ajax({
+  msg = new Message(null, null, name, metahash, null, null, null, null);
+  $.ajax, null({
     async: false,
     url: '/download',
     type: "POST",
@@ -266,7 +285,7 @@ class File {
 }
 
 class Message {
-  constructor(text, destination, filename, request, keywords, budget, peer) {
+  constructor(text, destination, filename, request, keywords, budget, peer, encrypted) {
     this.text = text;
     this.destination = destination;
     this.filename = filename;
@@ -274,6 +293,7 @@ class Message {
     this.keywords = keywords;
     this.budget = budget;
     this.peer = peer;
+    this.encrypted = encrypted;
     Object.keys(this).forEach((key) => (this[key] == null) && delete this[key]);
   }
 }

@@ -18,6 +18,7 @@ var file string
 var request string
 var keywords string
 var budget int64
+var encrypted bool
 
 func main() {
 	flag.IntVar(&uiPort, "UIPort", 8080, "port for the UI client")
@@ -27,6 +28,7 @@ func main() {
 	flag.StringVar(&request, "request", "", "request a chunk or metafile of this hash")
 	flag.StringVar(&keywords, "keywords", "", "comma separated list of keywords")
 	flag.Int64Var(&budget, "budget", -1, "budget for keyword search")
+	flag.BoolVar(&encrypted, "encrypt", false, "encrypt private message with the public key of the destination")
 	flag.Parse()
 
 	if file != "" {
@@ -44,7 +46,7 @@ func main() {
 		}
 	} else if msg != "" && dest != "" {
 		log.Println("Sending private message")
-		SendMessage(utils.Message{Text: msg, Destination: dest}, uiPort)
+		SendMessage(utils.Message{Text: msg, Destination: dest, Encrypted: encrypted}, uiPort)
 	} else if keywords != "" {
 		log.Println("Keywords:", keywords)
 		log.Println("Sending search request")

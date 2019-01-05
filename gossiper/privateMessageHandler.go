@@ -8,7 +8,13 @@ import (
 
 func (g *Gossiper) privateMessageHandler(msg utils.PrivateMessage) {
 	if msg.Destination == g.Name {
-		fmt.Printf("PRIVATE origin %s hop-limit %d contents %s\n", msg.Origin, msg.HopLimit, msg.Text)
+		if msg.EncryptedText != "" {
+			msg.EncryptedText = g.RSADecryptText(msg.EncryptedText)
+			fmt.Printf("PRIVATE ENCRYPTED origin %s hop-limit %d contents %s\n", msg.Origin, msg.HopLimit, msg.EncryptedText)
+		}
+		if msg.Text != "" {
+			fmt.Printf("PRIVATE origin %s hop-limit %d contents %s\n", msg.Origin, msg.HopLimit, msg.Text)
+		}
 		g.appendPrivateMessages(msg.Origin, msg)
 	} else {
 		msg.HopLimit -= 1

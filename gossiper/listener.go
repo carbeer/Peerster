@@ -67,7 +67,11 @@ func (g *Gossiper) ClientMessageHandler(msg utils.Message) {
 			if msg.Destination == "" {
 				g.newRumorMongeringMessage(msg)
 			} else {
-				g.newPrivateMessage(msg)
+				if msg.Encrypted {
+					g.newEncryptedPrivateMessage(msg)
+				} else {
+					g.newPrivateMessage(msg)
+				}
 			}
 		} else if msg.Peer != "" {
 			g.addPeerToListIfApplicable(msg.Peer)

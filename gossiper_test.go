@@ -50,6 +50,7 @@ func TestAdditionalMessages(t *testing.T) {
 
 func TestTextEncryption(t *testing.T) {
 	g := gossiper.NewGossiper("127.0.0.4", "", 5001, 12346, []string{"127.0.0.1:5002"}, false)
+	g2 := gossiper.NewGossiper("127.0.0.4", "", 5002, 12347, []string{"127.0.0.1:5001"}, false)
 	s := "Hi"
 	ctext := gossiper.RSAEncryptText(g.Name, s)
 	if ctext == s {
@@ -59,5 +60,11 @@ func TestTextEncryption(t *testing.T) {
 
 	if s != s_roundtrip {
 		t.Errorf(fmt.Sprint("Original and roundtrip message are not the same:", s, s_roundtrip))
+	}
+
+	s_roundtrip = g2.RSADecryptText(ctext)
+
+	if s == s_roundtrip {
+		t.Errorf("Another peer is not supposed to decrypt a message for someone else.")
 	}
 }
