@@ -197,3 +197,22 @@ func GetMaxEncodedChunkLength(pubKey *rsa.PublicKey) (int, error) {
 	}
 	return ret, nil
 }
+
+func GenerateRandomByteArr(length int) []byte {
+	key := make([]byte, length)
+	_, e := rand.Read(key)
+	HandleError(e)
+	return key
+}
+
+func EqualByteArr(arr1 []byte, arr2 []byte) bool {
+	if len(arr1) != len(arr2) {
+		return false
+	}
+	for i, _ := range arr1 {
+		if arr1[i] != arr2[i] {
+			return false
+		}
+	}
+	return true
+}

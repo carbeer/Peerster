@@ -27,3 +27,5 @@ const STATE_FOLDER = "_States"
 const KEY_FOLDER = "_Keys"
 const KEY_LENGTH = 550
 const HASH_ALGO = crypto.SHA1
+const AES_KEY_LENGTH = 32
+const AES_MARKUP = 28
