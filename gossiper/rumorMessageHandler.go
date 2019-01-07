@@ -10,6 +10,14 @@ import (
 	"github.com/carbeer/Peerster/utils"
 )
 
+func (g *Gossiper) newRumorMongeringMessage(msg utils.Message) {
+	rumorMessage := utils.RumorMessage{Origin: g.Name, ID: g.IdCounter, Text: msg.Text}
+	fmt.Printf("New rumor mongering message %+v\n", rumorMessage)
+	g.IdCounter = g.IdCounter + 1
+	g.appendReceivedMessages(rumorMessage.Origin, rumorMessage)
+	g.startRumorMongering(rumorMessage)
+}
+
 func (g *Gossiper) rumorMessageHandler(msg utils.RumorMessage, sender string) {
 	if msg.Text != "" {
 		fmt.Printf("RUMOR origin %s from %s ID %d contents %s\n", msg.Origin, sender, msg.ID, msg.Text)

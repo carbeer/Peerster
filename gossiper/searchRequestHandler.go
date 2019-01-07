@@ -5,9 +5,55 @@ import (
 	"math/rand"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/carbeer/Peerster/utils"
 )
+
+func (g *Gossiper) newSearchRequest(msg utils.Message) {
+	var searchRequest utils.SearchRequest
+	var timeout <-chan time.Time
+	fulfilled := uint32(0)
+	defaultBudget := false
+
+	if msg.Budget < 0 {
+		defaultBudget = true
+		searchRequest = utils.SearchRequest{Origin: g.Name, Budget: utils.DEFAULT_BUDGET, Keywords: msg.Keywords}
+	} else {
+		searchRequest = utils.SearchRequest{Origin: g.Name, Budget: uint64(msg.Budget), Keywords: msg.Keywords}
+	}
+	// Create a channel that is added to the list of searchRequests
+	g.setSearchRequestChannel(searchRequest, make(chan uint32, utils.MSG_BUFFER))
+	g.searchRequestHandler(searchRequest, false)
+	fmt.Printf("SEARCHING for keywords %s with budget %d\n", strings.Join(searchRequest.Keywords, ","), searchRequest.Budget)
+
+	if defaultBudget {
+		timeout = time.After(utils.SEARCH_REQUEST_TIMEOUT)
+	}
+Loop:
+	for {
+		select {
+		case <-timeout:
+			fmt.Printf("%d: TIMEOUT, DOUBLING BUDGET\n", time.Now().Second())
+			if searchRequest.Budget == utils.MAX_BUDGET {
+				fmt.Printf("Reached maximum budget. Stop searching.\n")
+				break Loop
+			}
+			searchRequest.Budget = utils.MinUint64(searchRequest.Budget*2, utils.MAX_BUDGET)
+			fmt.Printf("SEARCHING for keywords %s with budget %d\n", strings.Join(searchRequest.Keywords, ","), searchRequest.Budget)
+			g.searchRequestHandler(searchRequest, true)
+			timeout = time.After(utils.SEARCH_REQUEST_TIMEOUT)
+		case new := <-g.getSearchRequestChannel(searchRequest):
+			fulfilled += new
+			// Process message
+			if fulfilled >= utils.MIN_THRESHOLD {
+				fmt.Printf("SEARCH FINISHED\n")
+				break Loop
+			}
+		}
+	}
+	g.deleteSearchRequestChannel(searchRequest)
+}
 
 // resend is used to indicate that the current process already searched for available files
 func (g *Gossiper) searchRequestHandler(msg utils.SearchRequest, resend bool) {
