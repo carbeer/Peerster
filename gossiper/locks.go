@@ -1,6 +1,7 @@
 package gossiper
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"time"
@@ -59,6 +60,110 @@ func (g *Gossiper) sendToRumorMongeringChannel(key string, value utils.StatusPac
 	g.rumorMongeringChannelLock.Lock()
 	g.rumorMongeringChannel[key] <- value
 	g.rumorMongeringChannelLock.Unlock()
+}
+
+func (g *Gossiper) setChallengeChannel(key string, value chan utils.Challenge) {
+	g.challengeChannelLock.Lock()
+	g.challengeChannel[key] = value
+	g.challengeChannelLock.Unlock()
+}
+
+func (g *Gossiper) getChallengeChannel(key string) chan utils.Challenge {
+	g.challengeChannelLock.RLock()
+	val := g.challengeChannel[key]
+	g.challengeChannelLock.RUnlock()
+	return val
+}
+
+func (g *Gossiper) sendToChallangeChannel(key string, value utils.Challenge) {
+	g.challengeChannelLock.Lock()
+	g.challengeChannel[key] <- value
+	g.challengeChannelLock.Unlock()
+}
+
+func (g *Gossiper) deleteChallengeChannel(key string) {
+	g.challengeChannelLock.Lock()
+	delete(g.challengeChannel, key)
+	g.challengeChannelLock.Unlock()
+}
+
+func (g *Gossiper) setFileExchangeChannel(key string, value chan utils.FileExchangeRequest) {
+	g.fileExchangeChannelLock.Lock()
+	g.fileExchangeChannel[key] = value
+	g.fileExchangeChannelLock.Unlock()
+}
+
+func (g *Gossiper) getFileExchangeChannel(key string) chan utils.FileExchangeRequest {
+	g.fileExchangeChannelLock.RLock()
+	val := g.fileExchangeChannel[key]
+	g.fileExchangeChannelLock.RUnlock()
+	return val
+}
+
+func (g *Gossiper) sendToFileExchangeChannel(key string, value utils.FileExchangeRequest) {
+	g.fileExchangeChannelLock.Lock()
+	g.fileExchangeChannel[key] <- value
+	g.fileExchangeChannelLock.Unlock()
+}
+
+func (g *Gossiper) deleteFileExchangeChannel(key string) {
+	g.fileExchangeChannelLock.Lock()
+	delete(g.fileExchangeChannel, key)
+	g.fileExchangeChannelLock.Unlock()
+}
+
+func (g *Gossiper) addPrivateFile(msg utils.PrivateFile) {
+	g.privFileLock.Lock()
+	g.PrivFiles = append(g.PrivFiles, msg)
+	for i, _ := range msg.Replications {
+		el := &msg.Replications[i]
+		g.Replications[el.Metafilehash] = el
+	}
+	g.privFileLock.Unlock()
+}
+
+func (g *Gossiper) GetReplica(mfh string) utils.Replica {
+	g.privFileLock.RLock()
+	val := *g.Replications[mfh]
+	g.privFileLock.RUnlock()
+	return val
+}
+
+// If nodeID is empty, then no exchange has been arranged so far
+func (g *Gossiper) scanOpenFileExchanges() utils.Replica {
+	g.privFileLock.RLock()
+	defer g.privFileLock.RUnlock()
+	for _, f := range g.PrivFiles {
+		for _, r := range f.Replications {
+			if r.NodeID == "" {
+				return r
+			}
+		}
+	}
+	return utils.Replica{}
+}
+
+func (g *Gossiper) assignReplica(mfh string, nodeID string, exchangeMFH string) error {
+	g.privFileLock.Lock()
+	defer g.privFileLock.Unlock()
+	if g.Replications[mfh] == nil {
+		fmt.Printf("Replica %s is not existing\n", mfh)
+		return errors.New("Replica is not existing")
+	}
+	if g.Replications[mfh].NodeID != "" || g.Replications[mfh].ExchangeMFH != "" {
+		return errors.New("Replication is already assigned")
+	}
+	fmt.Println("Assigning new parameters for: ", mfh, nodeID, exchangeMFH)
+	g.Replications[mfh].NodeID = nodeID
+	g.Replications[mfh].ExchangeMFH = exchangeMFH
+	return nil
+}
+
+func (g *Gossiper) freeReplica(mfh string) {
+	g.privFileLock.Lock()
+	g.Replications[mfh].NodeID = ""
+	g.Replications[mfh].ExchangeMFH = ""
+	g.privFileLock.Unlock()
 }
 
 func (g *Gossiper) getDataRequestChannel(key string) chan bool {
@@ -131,6 +236,12 @@ func (g *Gossiper) getStoredChunk(key string) []byte {
 	val := g.StoredChunks[key]
 	g.storedChunksLock.RUnlock()
 	return val
+}
+
+func (g *Gossiper) removeStoredChunk(key string) {
+	g.storedChunksLock.Lock()
+	delete(g.StoredChunks, key)
+	g.storedChunksLock.Unlock()
 }
 
 func (g *Gossiper) addStoredChunk(key string, value []byte) {

@@ -19,6 +19,8 @@ var request string
 var keywords string
 var budget int64
 var encrypted bool
+var privateFile bool
+var Replications int
 
 func main() {
 	flag.IntVar(&uiPort, "UIPort", 8080, "port for the UI client")
@@ -29,6 +31,8 @@ func main() {
 	flag.StringVar(&keywords, "keywords", "", "comma separated list of keywords")
 	flag.Int64Var(&budget, "budget", -1, "budget for keyword search")
 	flag.BoolVar(&encrypted, "encrypt", false, "encrypt private message with the public key of the destination")
+	flag.BoolVar(&privateFile, "private", false, "index file privately")
+	flag.IntVar(&Replications, "Replications", 1, "number of Replications for private file uploads")
 	flag.Parse()
 
 	if file != "" {
@@ -41,8 +45,13 @@ func main() {
 				SendMessage(utils.Message{FileName: file, Request: request}, uiPort)
 			}
 		} else {
-			log.Println("Sending file indexing request")
-			SendMessage(utils.Message{FileName: file}, uiPort)
+			if privateFile {
+				log.Println("Sending private file indexing request")
+				SendMessage(utils.Message{FileName: file, Replications: Replications}, uiPort)
+			} else {
+				log.Println("Sending file indexing request")
+				SendMessage(utils.Message{FileName: file}, uiPort)
+			}
 		}
 	} else if msg != "" && dest != "" {
 		log.Println("Sending private message")

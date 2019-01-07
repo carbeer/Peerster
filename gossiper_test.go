@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"testing"
+	"time"
 
 	"github.com/carbeer/Peerster/gossiper"
 	"github.com/carbeer/Peerster/utils"
@@ -66,5 +67,18 @@ func TestTextEncryption(t *testing.T) {
 
 	if s == s_roundtrip {
 		t.Errorf("Another peer is not supposed to decrypt a message for someone else.")
+	}
+}
+
+func TestReplicationReferencing(t *testing.T) {
+	g := gossiper.NewGossiper("127.0.0.4", "", 5001, 12346, []string{"127.0.0.1:5002"}, false)
+	m := utils.Message{FileName: "lol.txt", Replications: 5}
+	g.PrivateFileIndexing(m)
+	<-time.After(5 * time.Second)
+
+	for key, val := range g.Replications {
+		if key != val.Metafilehash {
+			t.Errorf(fmt.Sprintf("Got mismatching metafilehashes: %s vs %s", key, val.Metafilehash))
+		}
 	}
 }

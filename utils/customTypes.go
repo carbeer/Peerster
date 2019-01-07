@@ -43,14 +43,15 @@ type DataReply struct {
 }
 
 type Message struct {
-	Text        string   `json:"text"`
-	Destination string   `json:"destination"`
-	FileName    string   `json:"filename"`
-	Request     string   `json:"request"`
-	Keywords    []string `json:"keywords"`
-	Budget      int64    `json:"budget"`
-	Peer        string   `json:"peer"`
-	Encrypted   bool     `json:encrypted"`
+	Text         string   `json:"text"`
+	Destination  string   `json:"destination"`
+	FileName     string   `json:"filename"`
+	Request      string   `json:"request"`
+	Keywords     []string `json:"keywords"`
+	Budget       int64    `json:"budget"`
+	Peer         string   `json:"peer"`
+	Encrypted    bool     `json:"encrypted"`
+	Replications int      `json:"replications"`
 }
 
 type TxPublish struct {
@@ -130,6 +131,38 @@ type File struct {
 	MetafileHash []byte
 }
 
+type PrivateFile struct {
+	File
+	Replications []Replica
+}
+
+type Replica struct {
+	NodeID        string
+	EncryptionKey []byte
+	// Exchange Metafilehash
+	ExchangeMFH  string
+	Metafilehash string
+}
+
+type FileExchangeRequest struct {
+	Origin               string
+	Destination          string // Empty for OFFER
+	Status               string // OFFER, ACCEPT, FIX
+	HopLimit             uint32
+	MetaFileHash         string
+	ExchangeMetaFileHash string
+}
+
+type Challenge struct {
+	Origin       string
+	Destination  string
+	MetaFileHash string
+	ChunkHash    string
+	Postpend     []byte
+	Solution     []byte
+	HopLimit     uint32
+}
+
 type FileSkeleton struct {
 	Name         string `json:"fileName"`
 	MetafileHash string `json:"metaHash"`
@@ -162,16 +195,18 @@ type HopInfo struct {
 }
 
 type GossipPacket struct {
-	Simple        *SimpleMessage
-	Rumor         *RumorMessage
-	Status        *StatusPacket
-	Private       *PrivateMessage
-	DataRequest   *DataRequest
-	DataReply     *DataReply
-	SearchRequest *SearchRequest
-	SearchReply   *SearchReply
-	TxPublish     *TxPublish
-	BlockPublish  *BlockPublish
+	Simple              *SimpleMessage
+	Rumor               *RumorMessage
+	Status              *StatusPacket
+	Private             *PrivateMessage
+	DataRequest         *DataRequest
+	DataReply           *DataReply
+	SearchRequest       *SearchRequest
+	SearchReply         *SearchReply
+	TxPublish           *TxPublish
+	BlockPublish        *BlockPublish
+	FileExchangeRequest *FileExchangeRequest
+	Challenge           *Challenge
 }
 
 type StoredMessage struct {

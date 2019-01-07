@@ -60,6 +60,8 @@ func (g *Gossiper) ClientMessageHandler(msg utils.Message) {
 					g.sendDataRequest(msg, g.getChunkHolder(msg.Request, 0))
 				}
 
+			} else if msg.Replications != 0 {
+				g.PrivateFileIndexing(msg)
 			} else {
 				g.indexFile(msg)
 			}
@@ -118,6 +120,11 @@ func (g *Gossiper) peerMessageHandler(msg utils.GossipPacket, sender string) {
 	} else if msg.BlockPublish != nil {
 		fmt.Printf("%s: Got block publish from %s \n", g.Name, sender)
 		g.blockPublishHandler(*msg.BlockPublish, sender)
+	} else if msg.FileExchangeRequest != nil {
+		fmt.Printf("%s: Got file exchange request from %s\n", g.Name, sender)
+		g.fileExchangeRequestHandler(*msg.FileExchangeRequest, sender)
+	} else if msg.Challenge != nil {
+		g.challengeHandler(*msg.Challenge, sender)
 	} else {
 		fmt.Printf("\n\nYOUR PEER MESSAGE:\n%+v\nWHAT'S THIS SUPPOSED TO BE? NOT PROPAGATING THIS.\n\n\n", msg)
 	}

@@ -44,6 +44,7 @@ type Gossiper struct {
 	LastBlock           utils.BlockWrapper
 	PendingTransactions []utils.TxPublish
 	ReceivedBlock       bool
+	PrivFiles           []utils.PrivateFile
 
 	// UDP connection for peers
 	udpConn net.UDPConn
@@ -57,8 +58,11 @@ type Gossiper struct {
 	destinationSpecified  map[string]bool
 	searchRequestChannel  map[string]chan uint32
 	// The next hash to be requested given the current hash
-	requestedChunks map[string]utils.ChunkInfo
-	privateKey      rsa.PrivateKey
+	requestedChunks     map[string]utils.ChunkInfo
+	privateKey          rsa.PrivateKey
+	fileExchangeChannel map[string]chan utils.FileExchangeRequest
+	challengeChannel    map[string]chan utils.Challenge
+	Replications        map[string]*utils.Replica
 
 	// Locks for maps
 	receivedMessagesLock      sync.RWMutex
@@ -76,6 +80,9 @@ type Gossiper struct {
 	searchRequestChannelLock  sync.RWMutex
 	externalFilesLock         sync.RWMutex
 	chainLock                 sync.RWMutex
+	challengeChannelLock      sync.RWMutex
+	fileExchangeChannelLock   sync.RWMutex
+	privFileLock              sync.RWMutex
 }
 
 func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []string, simple bool) *Gossiper {
@@ -104,6 +111,7 @@ func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []stri
 		DetachedBlocks:       make(map[utils.Hash]utils.Block),
 		ReceivedBlock:        false,
 		IdCounter:            uint32(1),
+		PrivFiles:            []utils.PrivateFile{},
 
 		udpConn:               *udpConn,
 		clientConn:            *clientConn,
@@ -112,6 +120,9 @@ func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []stri
 		dataRequestChannel:    make(map[string]chan bool),
 		searchRequestChannel:  make(map[string]chan uint32),
 		miner:                 make(chan bool, 1024),
+		fileExchangeChannel:   make(map[string]chan utils.FileExchangeRequest, 10240),
+		challengeChannel:      make(map[string]chan utils.Challenge, 10240),
+		Replications:          make(map[string]*utils.Replica),
 
 		receivedMessagesLock:      sync.RWMutex{},
 		privateMessagesLock:       sync.RWMutex{},
@@ -128,6 +139,9 @@ func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []stri
 		searchRequestChannelLock:  sync.RWMutex{},
 		externalFilesLock:         sync.RWMutex{},
 		chainLock:                 sync.RWMutex{},
+		challengeChannelLock:      sync.RWMutex{},
+		fileExchangeChannelLock:   sync.RWMutex{},
+		privFileLock:              sync.RWMutex{},
 	}
 
 	if name == "" {
@@ -158,6 +172,8 @@ func RestoreGossiper(gossipIp, name string, gossipPort, clientPort int, peers []
 	g.dataRequestChannel = make(map[string]chan bool)
 	g.searchRequestChannel = make(map[string]chan uint32)
 	g.miner = make(chan bool, 1024)
+	g.fileExchangeChannel = make(map[string]chan utils.FileExchangeRequest, 10240)
+	g.challengeChannel = make(map[string]chan utils.Challenge, 10240)
 
 	g.receivedMessagesLock = sync.RWMutex{}
 	g.privateMessagesLock = sync.RWMutex{}
