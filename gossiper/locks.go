@@ -130,17 +130,50 @@ func (g *Gossiper) GetReplica(mfh string) utils.Replica {
 }
 
 // If nodeID is empty, then no exchange has been arranged so far
-func (g *Gossiper) scanOpenFileExchanges() utils.Replica {
+func (g *Gossiper) scanOpenFileExchanges(peer string) utils.Replica {
+	g.privFileLock.Lock()
+	defer g.privFileLock.Unlock()
+Loop:
+	for _, f := range g.PrivFiles {
+		candidate := &utils.Replica{}
+		for _, r := range f.Replications {
+			// Node is already serving a replica of this file --> Not interesting
+			if r.NodeID == peer {
+				continue Loop
+			}
+			if r.NodeID == "" {
+				candidate = &r
+			}
+		}
+		if candidate != nil {
+			candidate.NodeID = peer
+			return *candidate
+		}
+	}
+	return utils.Replica{}
+}
+
+// Returns true if the peer is already storing a replication of that file
+func (g *Gossiper) checkReplicationAtPeer(mfh string, peer string) bool {
 	g.privFileLock.RLock()
 	defer g.privFileLock.RUnlock()
 	for _, f := range g.PrivFiles {
 		for _, r := range f.Replications {
-			if r.NodeID == "" {
-				return r
+			if r.Metafilehash == mfh {
+				return g.holdsFile(f, peer)
 			}
 		}
 	}
-	return utils.Replica{}
+	return false
+}
+
+func (g *Gossiper) holdsFile(file utils.PrivateFile, peer string) bool {
+	for _, r := range file.Replications {
+		if r.NodeID == peer {
+			return true
+		}
+	}
+	return false
 }
 
 func (g *Gossiper) assignReplica(mfh string, nodeID string, exchangeMFH string) error {

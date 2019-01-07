@@ -90,7 +90,7 @@ func (g *Gossiper) fileExchangeRequestHandler(msg utils.FileExchangeRequest, sen
 			return
 		}
 		fmt.Println("OFFER")
-		r := g.scanOpenFileExchanges()
+		r := g.scanOpenFileExchanges(msg.Origin)
 		// Not interested - Forward
 		if r.Metafilehash == "" {
 			fmt.Println("Not interested")
@@ -116,6 +116,10 @@ func (g *Gossiper) fileExchangeRequestHandler(msg utils.FileExchangeRequest, sen
 		break
 	case "ACCEPT":
 		fmt.Println("ACCEPT")
+		if g.checkReplicationAtPeer(msg.MetaFileHash, msg.Origin) {
+			fmt.Println("Peer is already holding a replication of this file")
+			return
+		}
 		if e := g.assignReplica(msg.MetaFileHash, msg.Origin, msg.ExchangeMetaFileHash); e != nil {
 			fmt.Println("Couldn't assign replica")
 			return
