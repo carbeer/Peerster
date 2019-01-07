@@ -272,3 +272,10 @@ func LoadState(id string) *Gossiper {
 	log.Printf("Got this: %+v\n", &g)
 	return &g
 }
+
+func (g *Gossiper) updateNextHop(origin string, id uint32, sender string) {
+	if id > g.getNextHop(origin).HighestID {
+		g.setNextHop(origin, utils.HopInfo{Address: sender, HighestID: id})
+		fmt.Printf("DSDV %s %s\n", origin, sender)
+	}
+}

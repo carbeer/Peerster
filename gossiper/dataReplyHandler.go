@@ -10,6 +10,20 @@ import (
 	"github.com/carbeer/Peerster/utils"
 )
 
+func (g *Gossiper) newDataReplyMessage(msg utils.DataRequest, sender string) {
+	dataReplyMessage := utils.DataReply{Origin: g.Name, Destination: msg.Origin, HopLimit: utils.HOPLIMIT_CONSTANT, HashValue: msg.HashValue, Data: g.getStoredChunk(hex.EncodeToString(msg.HashValue))}
+	gossipMessage := utils.GossipPacket{DataReply: &dataReplyMessage}
+
+	NextHop := g.getNextHop(dataReplyMessage.Destination)
+	if NextHop.HighestID != 0 {
+		fmt.Printf("Sending data reply %s to %s via %s\n", hex.EncodeToString(dataReplyMessage.HashValue), dataReplyMessage.Destination, NextHop.Address)
+		g.sendToPeer(gossipMessage, NextHop.Address)
+	} else {
+		fmt.Printf("No next hop to %s. Sending data response for %s back to where it came from: %s\n", dataReplyMessage.Destination, hex.EncodeToString(dataReplyMessage.HashValue), sender)
+		g.sendToPeer(gossipMessage, sender)
+	}
+}
+
 func (g *Gossiper) dataReplyHandler(msg utils.DataReply) {
 	if msg.Destination == g.Name {
 		g.receiveDataReply(msg)
@@ -39,7 +53,6 @@ func (g *Gossiper) receiveDataReply(msg utils.DataReply) {
 		}
 		return
 	}
-	destAvailable := g.getDesintationSpecified(reqChunk.MetaHash)
 
 	g.sendToDataRequestChannel(stringHashValue, true)
 	g.addStoredChunk(stringHashValue, msg.Data)
@@ -55,6 +68,7 @@ func (g *Gossiper) receiveDataReply(msg utils.DataReply) {
 		g.reconstructFile(reqChunk.MetaHash)
 		return
 	}
+	destAvailable := g.getDesintationSpecified(stringHashValue)
 	if !destAvailable {
 		g.sendDataRequest(utils.Message{Request: g.popRequestedChunks(stringHashValue).NextHash}, g.getChunkHolder(reqChunk.MetaHash, (reqChunk.ChunkNr+1)))
 	} else {

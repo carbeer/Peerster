@@ -22,7 +22,7 @@ func (g *Gossiper) rumorMessageHandler(msg utils.RumorMessage, sender string) {
 
 	// Check whether the message is desired
 	if origin != g.Name {
-		g.updateNextHop(msg, sender)
+		g.updateNextHop(msg.Origin, msg.ID, sender)
 		if len(g.getReceivedMessages(origin))+1 == int(msg.ID) {
 			g.appendReceivedMessages(msg.Origin, msg)
 
@@ -35,13 +35,6 @@ func (g *Gossiper) rumorMessageHandler(msg utils.RumorMessage, sender string) {
 	}
 	g.sendAcknowledgement(sender)
 	wg.Wait()
-}
-
-func (g *Gossiper) updateNextHop(msg utils.RumorMessage, sender string) {
-	if msg.ID > g.getNextHop(msg.Origin).HighestID {
-		g.setNextHop(msg.Origin, utils.HopInfo{Address: sender, HighestID: msg.ID})
-		fmt.Printf("DSDV %s %s\n", msg.Origin, sender)
-	}
 }
 
 func (g *Gossiper) pickRandomPeerForMongering(origin string) string {
