@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -215,3 +216,16 @@ type StoredMessage struct {
 }
 
 type Hash [32]byte
+
+func (h Hash) MarshalText() (text []byte, err error) {
+	return []byte(StringHash(text)), nil
+}
+
+func (h *Hash) UnmarshalText(text []byte) error {
+	var s string
+	if e := json.Unmarshal(text, &s); e != nil {
+		return e
+	}
+	*h = FixedByteHash(s)
+	return nil
+}

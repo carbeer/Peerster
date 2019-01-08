@@ -1,21 +1,16 @@
 package gossiper
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/hex"
-	"io"
-	"log"
 	"math"
 
 	"github.com/carbeer/Peerster/utils"
 )
 
 func RSAEncryptText(target string, text string) string {
-
 	textBytes := []byte(text)
 	hash := utils.HASH_ALGO.New()
 	pubKeyBytes, e := hex.DecodeString(target)
@@ -50,32 +45,4 @@ func (g *Gossiper) RSADecryptText(ctext string) string {
 		i = j
 	}
 	return text
-}
-
-func AESEncrypt(data []byte, key []byte) []byte {
-	log.Println("Length of the data before:", len(data))
-	block, e := aes.NewCipher(key)
-	utils.HandleError(e)
-	gcm, e := cipher.NewGCM(block)
-	utils.HandleError(e)
-	nonce := make([]byte, gcm.NonceSize())
-	_, e = io.ReadFull(rand.Reader, nonce)
-	utils.HandleError(e)
-	ciphertext := gcm.Seal(nonce, nonce, data, nil)
-	log.Println("Length of the ciphertext:", len(ciphertext))
-	return ciphertext
-}
-
-func (g *Gossiper) AESDecrypt(data []byte, key []byte) []byte {
-	block, e := aes.NewCipher(key)
-	utils.HandleError(e)
-	gcm, e := cipher.NewGCM(block)
-	utils.HandleError(e)
-	nonceSize := gcm.NonceSize()
-	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
-	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
-	if err != nil {
-		panic(err.Error())
-	}
-	return plaintext
 }
