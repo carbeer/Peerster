@@ -114,7 +114,7 @@ func (g *Gossiper) deleteFileExchangeChannel(key string) {
 
 func (g *Gossiper) addPrivateFile(msg utils.PrivateFile) {
 	g.privFileLock.Lock()
-	g.PrivFiles = append(g.PrivFiles, msg)
+	g.PrivFiles[utils.StringHash(msg.MetafileHash)] = msg
 	for i, _ := range msg.Replications {
 		el := &msg.Replications[i]
 		g.Replications[el.Metafilehash] = el
@@ -134,19 +134,18 @@ func (g *Gossiper) scanOpenFileExchanges(peer string) utils.Replica {
 	g.privFileLock.Lock()
 	defer g.privFileLock.Unlock()
 Loop:
-	for _, f := range g.PrivFiles {
-		candidate := &utils.Replica{}
-		for _, r := range f.Replications {
+	for k, f := range g.PrivFiles {
+		var candidate *utils.Replica = nil
+		for i, _ := range f.Replications {
 			// Node is already serving a replica of this file --> Not interesting
-			if r.NodeID == peer {
+			if g.PrivFiles[k].Replications[i].NodeID == peer {
 				continue Loop
 			}
-			if r.NodeID == "" {
-				candidate = &r
+			if g.PrivFiles[k].Replications[i].NodeID == "" {
+				candidate = &g.PrivFiles[k].Replications[i]
 			}
 		}
 		if candidate != nil {
-			candidate.NodeID = peer
 			return *candidate
 		}
 	}
@@ -176,7 +175,7 @@ func (g *Gossiper) holdsFile(file utils.PrivateFile, peer string) bool {
 	return false
 }
 
-func (g *Gossiper) assignReplica(mfh string, nodeID string, exchangeMFH string) error {
+func (g *Gossiper) AssignReplica(mfh string, nodeID string, exchangeMFH string) error {
 	g.privFileLock.Lock()
 	defer g.privFileLock.Unlock()
 	if g.Replications[mfh] == nil {
@@ -184,6 +183,9 @@ func (g *Gossiper) assignReplica(mfh string, nodeID string, exchangeMFH string) 
 		return errors.New("Replica is not existing")
 	}
 	if g.Replications[mfh].NodeID != "" || g.Replications[mfh].ExchangeMFH != "" {
+		fmt.Printf("Found: %p\n", g.Replications[mfh])
+		fmt.Printf("Replica %s already assigned: %+v\n", mfh, g.Replications[mfh])
+		g.compare()
 		return errors.New("Replication is already assigned")
 	}
 	fmt.Println("Assigning new parameters for: ", mfh, nodeID, exchangeMFH)
@@ -192,11 +194,51 @@ func (g *Gossiper) assignReplica(mfh string, nodeID string, exchangeMFH string) 
 	return nil
 }
 
+func (g *Gossiper) compare() {
+	for key, _ := range g.PrivFiles {
+		fmt.Printf("%+v\n", g.PrivFiles[key])
+		for i, v := range g.PrivFiles[key].Replications {
+			// if g.Replications[v.Metafilehash] != &g.PrivFiles[key].Replications[i] {
+			fmt.Printf("%p vs %p for key %s and %s\n", g.Replications[v.Metafilehash], &g.PrivFiles[key].Replications[i], v.Metafilehash, key)
+			// }
+		}
+	}
+}
+
 func (g *Gossiper) freeReplica(mfh string) {
 	g.privFileLock.Lock()
 	g.Replications[mfh].NodeID = ""
 	g.Replications[mfh].ExchangeMFH = ""
 	g.privFileLock.Unlock()
+}
+
+func (g *Gossiper) getDistributedReplica(f utils.PrivateFile) utils.Replica {
+	g.privFileLock.RLock()
+	defer g.privFileLock.RUnlock()
+	for _, r := range f.Replications {
+		if r.NodeID != "" {
+			return r
+		}
+	}
+	return utils.Replica{}
+}
+
+func (g *Gossiper) countDistributedReplicas(f utils.PrivateFile) int {
+	g.privFileLock.RLock()
+	defer g.privFileLock.RUnlock()
+	count := 0
+	for _, r := range f.Replications {
+		if r.NodeID != "" {
+			count++
+		}
+	}
+	return count
+}
+
+func (g *Gossiper) getPrivateFile(mfh string) utils.PrivateFile {
+	g.privFileLock.RLock()
+	defer g.privFileLock.RUnlock()
+	return g.PrivFiles[mfh]
 }
 
 func (g *Gossiper) getDataRequestChannel(key string) chan bool {
@@ -208,6 +250,7 @@ func (g *Gossiper) getDataRequestChannel(key string) chan bool {
 
 func (g *Gossiper) getDesintationSpecified(key string) bool {
 	g.dataRequestChannelLock.RLock()
+	fmt.Printf("Querying destination specified\n")
 	val := g.destinationSpecified[key]
 	g.dataRequestChannelLock.RUnlock()
 	return val
@@ -215,6 +258,7 @@ func (g *Gossiper) getDesintationSpecified(key string) bool {
 
 func (g *Gossiper) setDataRequestChannel(key string, value chan bool, addValue bool) {
 	g.dataRequestChannelLock.Lock()
+	fmt.Printf("Setting data request channel and destination specified with arguments: %s, %t\n", key, addValue)
 	g.dataRequestChannel[key] = value
 	g.destinationSpecified[key] = addValue
 	g.dataRequestChannelLock.Unlock()
@@ -222,6 +266,7 @@ func (g *Gossiper) setDataRequestChannel(key string, value chan bool, addValue b
 
 func (g *Gossiper) deleteDataRequestChannel(key string) {
 	g.dataRequestChannelLock.Lock()
+	fmt.Printf("Deleting data request channel and destination specified\n")
 	delete(g.dataRequestChannel, key)
 	delete(g.destinationSpecified, key)
 	g.dataRequestChannelLock.Unlock()
@@ -377,6 +422,28 @@ func (g *Gossiper) isCachedSearchRequest(msg utils.SearchRequest) bool {
 		return false
 	}
 	return true
+}
+
+func (g *Gossiper) GetAllOrigins() string {
+	g.nextHopLock.RLock()
+	allOrigins := ""
+	for k, _ := range g.NextHop {
+		allOrigins = allOrigins + k + "\n"
+	}
+	g.nextHopLock.RUnlock()
+	return allOrigins
+}
+
+func (g *Gossiper) getAllPrivateFiles() map[string]string {
+	g.privFileLock.RLock()
+	// metafilehash to string
+	allPrivateFiles := make(map[string]string)
+
+	for k, v := range g.PrivFiles {
+		allPrivateFiles[k] = v.Name
+	}
+	g.privFileLock.RUnlock()
+	return allPrivateFiles
 }
 
 // creates or updates searchRequest

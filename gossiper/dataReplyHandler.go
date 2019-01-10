@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/carbeer/Peerster/utils"
 )
@@ -97,7 +98,7 @@ func (g *Gossiper) onMetaFileReception(metaFile []byte, hashValue []byte) {
 
 func (g *Gossiper) reconstructFile(metaHash string) {
 	_ = os.Mkdir(fmt.Sprintf(".%s%s", string(os.PathSeparator), utils.DOWNLOAD_FOLDER), os.ModePerm)
-	file, e := os.Create(fmt.Sprintf(".%s%s%s%s", string(os.PathSeparator), utils.DOWNLOAD_FOLDER, string(os.PathSeparator), g.getStoredFile(metaHash).Name))
+	file, e := os.Create(filepath.Join(".", utils.DOWNLOAD_FOLDER, g.getStoredFile(metaHash).Name))
 	utils.HandleError(e)
 	defer file.Close()
 	metaFile := g.getStoredChunk(metaHash)
@@ -117,6 +118,7 @@ func (g *Gossiper) reconstructFile(metaHash string) {
 	g.setStoredFile(metaHash, storedFile)
 
 	fmt.Printf("RECONSTRUCTED file %s\n", storedFile.Name)
+	g.fileDownloadChannel[metaHash] <- true
 }
 
 func CheckDataValidity(data []byte, hash []byte) bool {

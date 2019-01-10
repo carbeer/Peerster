@@ -22,7 +22,7 @@
     </p>
     <p>
       <div class="alert alert-success" id="id" role="alert">
-        ID of your Peerster node: 
+        ID of your Peerster node:
       </div>
 
     </p>
@@ -90,12 +90,13 @@
           </div>
 
           <div class="input-group mb-3">
-            <input id='privateEncryptedMessage' class="form-control" type='text' placeholder='Your encrypted message...' aria-label="Your encrypted message...">
+            <input id='privateEncryptedMessage' class="form-control" type='text' placeholder='Your encrypted message...'
+              aria-label="Your encrypted message...">
             <div class="input-group-append">
-              <button id="sendPrivateEncryptedMessage" type="button" class="btn btn-outline-secondary">Send Private Encrypted Message</button>
+              <button id="sendPrivateEncryptedMessage" type="button" class="btn btn-outline-secondary">Send Private
+                Encrypted Message</button>
             </div>
           </div>
-
         </div>
       </div>
     </div>
@@ -109,9 +110,9 @@
           <label for="fileForm">Index a file</label>
           <div class="input-group">
             <div class="custom-file">
-              <input id="fileForm" type="file" class="form-control" name="Share file..." class="custom-file-input"
-                outline=none required />
-              <label class="custom-file-label" for="fileForm">Choose file</label>
+              <input id="fileForm" type="file" class="form-control" name="Choose file..." class="custom-file-input"
+                outline=none />
+              <label class="custom-file-label" for="fileForm">Choose file...</label>
             </div>
             <div class="input-group-append">
               <button id="uploadButton" class="btn btn-outline-secondary" type="button">Request indexing</button>
@@ -137,10 +138,8 @@
         </div>
 
         <div class="input-group mb-3">
-          <input id='fileName' type='text' class="form-control" placeholder='Desired file name...' aria-label='Desired file name...'
-            required>
-          <input id='downloadHash' type='text' class="form-control" placeholder='Insert the meta hash...' aria-label='Insert the meta hash...'
-            required>
+          <input id='fileName' type='text' class="form-control" placeholder='Desired file name...' aria-label='Desired file name...'>
+          <input id='downloadHash' type='text' class="form-control" placeholder='Insert the meta hash...' aria-label='Insert the meta hash...'>
           <div class="input-group-append">
             <button id='sendDownloadRequest' type="button" class="btn btn-outline-secondary">Request download</button>
           </div>
@@ -164,7 +163,77 @@
         </div>
       </div>
     </div>
-  </div>
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Private File Handling</h3>
+      </div>
+      <div class="card-body">
+        <div class="card-section">
+          <label for="downloadByName">Available Private Files</label>
+          <div class="input-group mb-3">
+            <div class="input-group-prepend">
+              <label class="input-group-text" for="availablePrivateFiles">Available files</label>
+            </div>
+            <select class="custom-select" id="availablePrivateFiles" size=5>
+            </select>
+          </div>
+        </div>
+        <div class="card-section">
+          <label for="fileForm">Upload a Private File</label>
+          <div class="input-group">
+
+            <div class="input-group-prepend">
+              <label class="input-group-text" for="replications">Number of replications</label>
+            </div>
+            <select class="custom-select" id="replications">
+              <option id="0" value="-1">0 (store only on this node)</option>
+              <option id="1" value="1">1</option>
+              <option id="2" value="2">2</option>
+              <option id="3" value="3">3</option>
+              <option id="4" value="4">4</option>
+              <option id="5" value="5">5</option>
+            </select>
+
+            <div class="custom-file">
+              <input id="privateFileForm" type="file" class="form-control" name="Choose file..." class="custom-file-input"
+                outline=none />
+              <label class="custom-file-label" for="privateFileForm">Choose file...</label>
+            </div>
+            <div class="input-group-append">
+              <button id="privateUploadButton" class="btn btn-outline-secondary" type="button">Upload</button>
+            </div>
+          </div>
+        </div>
+        <div class="card-section">
+          <table width="100%">
+            <tbody>
+              <tr>
+                <td style="text-align: justify">
+                  <label for="exportJSON">Export state</label>
+                  <div class="input-group-append">
+                    <button id="exportJSON" type="button" class="btn btn-outline-secondary">Export private file digest</button>
+                  </div>
+                </td>
+                <td style="text-align: justify">
+                  <label for="importJSON">Import state</label>
+                  <div class="input-group">
+                    <div class="custom-file">
+                      <input id="importJSONform" type="file" class="form-control" name="Choose file..." class="custom-file-input"
+                        outline=none />
+                      <label class="custom-file-label" for="importJSONform">Choose file...</label>
+                    </div>
+                    <div class="input-group-append">
+                      <button id="importJSON" class="btn btn-outline-secondary" type="button">Upload private file
+                        digest</button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
 </body>
 <script src="js/server.js" type="text/javascript"></script>
 

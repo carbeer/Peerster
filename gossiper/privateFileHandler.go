@@ -13,6 +13,9 @@ import (
 )
 
 func (g *Gossiper) PrivateFileIndexing(msg utils.Message) {
+	if msg.Replications == -1 {
+		msg.Replications = 0
+	}
 	fmt.Printf("REQUESTING PRIVATE INDEXING filename %s with %d Replications\n", msg.FileName, msg.Replications)
 	var hashFunc = crypto.SHA256.New()
 	file, e := os.Open(filepath.Join(".", utils.SHARED_FOLDER, msg.FileName))
@@ -101,12 +104,13 @@ func (g *Gossiper) fileExchangeRequestHandler(msg utils.FileExchangeRequest, sen
 			// Interested - Create channel
 		} else {
 			fmt.Println("Interested, create channel")
-			if e := g.assignReplica(r.Metafilehash, msg.Origin, msg.MetaFileHash); e != nil {
+			if e := g.AssignReplica(r.Metafilehash, msg.Origin, msg.MetaFileHash); e != nil {
 				fmt.Println("Couldn't assign replica")
 				return
 			}
 			resp := utils.FileExchangeRequest{Origin: g.Name, Destination: msg.Origin, Status: "ACCEPT", MetaFileHash: msg.MetaFileHash, ExchangeMetaFileHash: r.Metafilehash, HopLimit: utils.HOPLIMIT_CONSTANT}
 			gp := utils.GossipPacket{FileExchangeRequest: &resp}
+			fmt.Printf("%s nextHop for %s\n", g.getNextHop(msg.Origin).Address, msg.Origin)
 			go g.sendToPeer(gp, g.getNextHop(msg.Origin).Address)
 			g.holdingFileExchangeRequest(msg, r)
 		}
@@ -116,7 +120,7 @@ func (g *Gossiper) fileExchangeRequestHandler(msg utils.FileExchangeRequest, sen
 		if g.checkReplicationAtPeer(msg.MetaFileHash, msg.Origin) {
 			return
 		}
-		if e := g.assignReplica(msg.MetaFileHash, msg.Origin, msg.ExchangeMetaFileHash); e != nil {
+		if e := g.AssignReplica(msg.MetaFileHash, msg.Origin, msg.ExchangeMetaFileHash); e != nil {
 			return
 		}
 		resp := utils.FileExchangeRequest{Origin: g.Name, Destination: msg.Origin, Status: "FIX", MetaFileHash: msg.MetaFileHash, ExchangeMetaFileHash: msg.ExchangeMetaFileHash, HopLimit: utils.HOPLIMIT_CONSTANT}
@@ -162,29 +166,34 @@ func (g *Gossiper) establishFileExchange(msg utils.FileExchangeRequest, initiati
 	}
 	g.deleteFileExchangeChannel(msg.MetaFileHash)
 	g.setChallengeChannel(ownRep.Metafilehash, make(chan utils.Challenge, 1024))
-	m := utils.Message{FileName: otherMFH, Destination: msg.Origin, Request: otherMFH}
+	m := utils.Message{FileName: otherMFH, Destination: ownRep.NodeID, Request: otherMFH}
 	g.sendDataRequest(m, ownRep.NodeID)
 	interval := utils.FILE_EXCHANGE_TIMEOUT
 
 	for {
+		log.Println("Still in the loop")
 		<-time.After(interval)
 		g.poseChallenge(ownRep)
+		fmt.Printf("Sending out PoR request\n")
 		timeout := time.After(utils.FILE_EXCHANGE_TIMEOUT)
 		select {
 		case <-timeout:
+			fmt.Printf("Peer failed to respond\n")
 			interval = utils.FILE_EXCHANGE_TIMEOUT
 			fails++
 			break
 		case msg := <-g.getChallengeChannel(ownRep.Metafilehash):
 			if g.verifyChallenge(msg) {
+				fmt.Printf("Peer solved the challenge.\n")
 				interval *= 2
 			} else {
+				fmt.Printf("Peer solved the challenge incorrectly.\n")
 				interval = utils.FILE_EXCHANGE_TIMEOUT
 				fails++
 			}
 		}
 		if fails > utils.CHALLENGE_FAIL_THRESHOLD {
-			fmt.Println("Peer failed too many times. Removing the reference now.")
+			fmt.Printf("Peer failed too many times. Removing the reference now.\n")
 			g.removeFile(otherMFH)
 			g.freeReplica(ownRep.Metafilehash)
 			return

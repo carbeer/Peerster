@@ -1,19 +1,19 @@
 package utils
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
 	"fmt"
 	"io"
-	"log"
 	"math"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 func AESEncrypt(data []byte, key []byte) []byte {
-	log.Println("Length of the data before:", len(data))
 	block, e := aes.NewCipher(key)
 	HandleError(e)
 	gcm, e := cipher.NewGCM(block)
@@ -22,7 +22,6 @@ func AESEncrypt(data []byte, key []byte) []byte {
 	_, e = io.ReadFull(rand.Reader, nonce)
 	HandleError(e)
 	ciphertext := gcm.Seal(nonce, nonce, data, nil)
-	log.Println("Length of the ciphertext:", len(ciphertext))
 	return ciphertext
 }
 
@@ -33,15 +32,16 @@ func AESDecrypt(data []byte, key []byte) []byte {
 	HandleError(e)
 	nonceSize := gcm.NonceSize()
 	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
-	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
-	if err != nil {
-		panic(err.Error())
-	}
+	plaintext, e := gcm.Open(nil, nonce, ciphertext, nil)
+	HandleError(e)
 	return plaintext
 }
 
 func DecryptFile(r Replica, name string) {
+	<-time.After(time.Second) // Wait for deferred file closing
 	file, e := os.Open(filepath.Join(".", DOWNLOAD_FOLDER, name))
+	HandleError(e)
+	file_dec, e := os.Create(filepath.Join(".", DOWNLOAD_FOLDER, "decrypted_"+name))
 	HandleError(e)
 
 	fileInfo, e := file.Stat()
@@ -53,9 +53,10 @@ func DecryptFile(r Replica, name string) {
 	for i := 0; i < noChunks; i++ {
 		chunk := GetNextDataChunk(file, CHUNK_SIZE+AES_MARKUP)
 		chunk = AESDecrypt(chunk, r.EncryptionKey)
-		_, e = file.Write(chunk)
+		_, e = file_dec.Write(bytes.Trim(chunk, "\x00"))
 		HandleError(e)
 	}
+
 	file.Close()
 	fmt.Printf("DECRYPTED file %s\n", name)
 }

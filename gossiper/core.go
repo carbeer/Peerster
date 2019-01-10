@@ -2,13 +2,10 @@ package gossiper
 
 import (
 	"crypto/rsa"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
-	"os"
-	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"sync"
 
@@ -44,7 +41,7 @@ type Gossiper struct {
 	LastBlock           utils.BlockWrapper
 	PendingTransactions []utils.TxPublish
 	ReceivedBlock       bool
-	PrivFiles           []utils.PrivateFile
+	PrivFiles           map[string]utils.PrivateFile
 
 	// UDP connection for peers
 	udpConn net.UDPConn
@@ -57,12 +54,13 @@ type Gossiper struct {
 	dataRequestChannel    map[string]chan bool
 	destinationSpecified  map[string]bool
 	searchRequestChannel  map[string]chan uint32
+	fileDownloadChannel   map[string]chan bool
 	// The next hash to be requested given the current hash
 	requestedChunks     map[string]utils.ChunkInfo
 	privateKey          rsa.PrivateKey
 	fileExchangeChannel map[string]chan utils.FileExchangeRequest
 	challengeChannel    map[string]chan utils.Challenge
-	Replications        map[string]*utils.Replica
+	Replications        map[string]*utils.Replica `json:"-"`
 
 	// Locks for maps
 	receivedMessagesLock      sync.RWMutex
@@ -111,7 +109,7 @@ func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []stri
 		DetachedBlocks:       make(map[utils.Hash]utils.Block),
 		ReceivedBlock:        false,
 		IdCounter:            uint32(1),
-		PrivFiles:            []utils.PrivateFile{},
+		PrivFiles:            make(map[string]utils.PrivateFile),
 
 		udpConn:               *udpConn,
 		clientConn:            *clientConn,
@@ -123,6 +121,7 @@ func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []stri
 		fileExchangeChannel:   make(map[string]chan utils.FileExchangeRequest, 10240),
 		challengeChannel:      make(map[string]chan utils.Challenge, 10240),
 		Replications:          make(map[string]*utils.Replica),
+		fileDownloadChannel:   make(map[string]chan bool, 1024),
 
 		receivedMessagesLock:      sync.RWMutex{},
 		privateMessagesLock:       sync.RWMutex{},
@@ -208,6 +207,7 @@ func RestoreGossiper(gossipIp, name string, gossipPort, clientPort int, peers []
 func (g *Gossiper) sendToPeer(gossipPacket utils.GossipPacket, targetIpPort string) {
 	if targetIpPort == "" {
 		fmt.Printf("No target address given. Not sending this message: %+v.\n", gossipPacket)
+		debug.PrintStack()
 		return
 	}
 	if gossipPacket.Rumor != nil {
@@ -260,37 +260,8 @@ func (g *Gossiper) GetAllPeers() string {
 	return strings.Join(g.Peers, "\n")
 }
 
-func (g *Gossiper) GetAllOrigins() string {
-	g.nextHopLock.RLock()
-	allOrigins := ""
-	for k, _ := range g.NextHop {
-		allOrigins = allOrigins + k + "\n"
-	}
-	g.nextHopLock.RUnlock()
-	return allOrigins
-}
-
-func (g *Gossiper) SaveState() {
-	obj, e := json.MarshalIndent(g, "", "\t")
-	utils.HandleError(e)
-	_ = os.Mkdir(utils.STATE_FOLDER, os.ModePerm)
-	cwd, _ := os.Getwd()
-	e = ioutil.WriteFile(filepath.Join(cwd, utils.STATE_FOLDER, fmt.Sprint(g.Name, ".json")), obj, 0644)
-	utils.HandleError(e)
-}
-
-func LoadState(id string) *Gossiper {
-	g := Gossiper{}
-	cwd, _ := os.Getwd()
-	f, e := ioutil.ReadFile(filepath.Join(cwd, utils.STATE_FOLDER, fmt.Sprint(id, ".json")))
-	utils.HandleError(e)
-	json.Unmarshal(f, &g)
-	log.Printf("Got this: %+v\n", &g)
-	return &g
-}
-
 func (g *Gossiper) updateNextHop(origin string, id uint32, sender string) {
-	if id > g.getNextHop(origin).HighestID {
+	if id > g.getNextHop(origin).HighestID || g.getNextHop(origin).HighestID == 0 {
 		g.setNextHop(origin, utils.HopInfo{Address: sender, HighestID: id})
 		fmt.Printf("DSDV %s %s\n", origin, sender)
 	}

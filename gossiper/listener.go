@@ -38,7 +38,8 @@ func (g *Gossiper) ListenPeerMessages() {
 	}
 }
 
-func (g *Gossiper) ClientMessageHandler(msg utils.Message) {
+func (g *Gossiper) ClientMessageHandler(msg utils.Message) error {
+	var err error
 	var wg sync.WaitGroup
 	var gossipPacket utils.GossipPacket
 	if g.Simple {
@@ -54,14 +55,15 @@ func (g *Gossiper) ClientMessageHandler(msg utils.Message) {
 	} else {
 		if msg.FileName != "" {
 			if msg.Request != "" {
-				if msg.Destination != "" {
-					g.sendDataRequest(msg, msg.Destination)
+				if msg.Encrypted {
+					err = g.DownloadPrivateFile(msg)
 				} else {
-					g.sendDataRequest(msg, g.getChunkHolder(msg.Request, 0))
+					err = g.DownloadFile(msg)
 				}
-
 			} else if msg.Replications != 0 {
 				g.PrivateFileIndexing(msg)
+			} else if msg.Encrypted {
+				g.LoadPrivateFiles(msg.FileName)
 			} else {
 				g.indexFile(msg)
 			}
@@ -84,6 +86,7 @@ func (g *Gossiper) ClientMessageHandler(msg utils.Message) {
 		}
 	}
 	wg.Wait()
+	return err
 }
 
 func (g *Gossiper) peerMessageHandler(msg utils.GossipPacket, sender string) {

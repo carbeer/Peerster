@@ -1,11 +1,34 @@
 package gossiper
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/carbeer/Peerster/utils"
 )
+
+func (g *Gossiper) DownloadFile(msg utils.Message) error {
+	var err error
+	g.fileDownloadChannel[msg.Request] = make(chan bool, 1024)
+	if msg.Destination != "" {
+		g.sendDataRequest(msg, msg.Destination)
+	} else {
+		g.sendDataRequest(msg, g.getChunkHolder(msg.Request, 0))
+	}
+
+	timeout := time.After(utils.PRIV_FILE_REQ_TIMEOUT)
+
+	select {
+	case <-timeout:
+		err = errors.New("Timeout, couldn't download file")
+		break
+	case <-g.fileDownloadChannel[msg.Request]:
+		break
+	}
+	delete(g.fileDownloadChannel, msg.Request)
+	return err
+}
 
 func (g *Gossiper) sendDataRequest(msg utils.Message, destination string) {
 	var dataRequest utils.DataRequest

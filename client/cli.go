@@ -20,7 +20,8 @@ var keywords string
 var budget int64
 var encrypted bool
 var privateFile bool
-var Replications int
+var replications int
+var state string
 
 func main() {
 	flag.IntVar(&uiPort, "UIPort", 8080, "port for the UI client")
@@ -32,12 +33,16 @@ func main() {
 	flag.Int64Var(&budget, "budget", -1, "budget for keyword search")
 	flag.BoolVar(&encrypted, "encrypt", false, "encrypt private message with the public key of the destination")
 	flag.BoolVar(&privateFile, "private", false, "index file privately")
-	flag.IntVar(&Replications, "Replications", 1, "number of Replications for private file uploads")
+	flag.IntVar(&replications, "replications", 1, "number of replications for private file uploads")
+	flag.StringVar(&state, "state", "", "upload state")
 	flag.Parse()
 
 	if file != "" {
 		if request != "" {
-			if dest != "" {
+			if encrypted {
+				log.Println("Sending private download request")
+				SendMessage(utils.Message{FileName: file, Request: request, Encrypted: true}, uiPort)
+			} else if dest != "" {
 				log.Println("Sending file download request")
 				SendMessage(utils.Message{FileName: file, Request: request, Destination: dest}, uiPort)
 			} else {
@@ -47,7 +52,10 @@ func main() {
 		} else {
 			if privateFile {
 				log.Println("Sending private file indexing request")
-				SendMessage(utils.Message{FileName: file, Replications: Replications}, uiPort)
+				if replications == 0 {
+					replications = -1
+				}
+				SendMessage(utils.Message{FileName: file, Replications: replications}, uiPort)
 			} else {
 				log.Println("Sending file indexing request")
 				SendMessage(utils.Message{FileName: file}, uiPort)
@@ -57,12 +65,14 @@ func main() {
 		log.Println("Sending private message")
 		SendMessage(utils.Message{Text: msg, Destination: dest, Encrypted: encrypted}, uiPort)
 	} else if keywords != "" {
-		log.Println("Keywords:", keywords)
 		log.Println("Sending search request")
 		SendMessage(utils.Message{Keywords: strings.Split(keywords, ","), Budget: budget}, uiPort)
-	} else {
+	} else if msg != "" {
 		log.Println("Sending normal message")
 		SendMessage(utils.Message{Text: msg}, uiPort)
+	} else if state != "" {
+		log.Println("Uploading state")
+		SendMessage(utils.Message{FileName: state, Encrypted: true}, uiPort)
 	}
 }
 

@@ -10,11 +10,11 @@ import (
 )
 
 // Helper functions
-func (g *Gossiper) unmarshalAndForward(r *http.Request) {
+func (g *Gossiper) unmarshalAndForward(r *http.Request) error {
 	var msg utils.Message
 	e := json.NewDecoder(r.Body).Decode(&msg)
 	utils.HandleError(e)
-	g.ClientMessageHandler(msg)
+	return g.ClientMessageHandler(msg)
 }
 
 // Handler functions
@@ -81,6 +81,21 @@ func (g *Gossiper) handleFile(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (g *Gossiper) handlePrivateFile(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		mapping := g.getAllPrivateFiles()
+		utils.MarshalAndWrite(w, mapping)
+		break
+	case http.MethodPost:
+		g.unmarshalAndForward(r)
+		utils.MarshalAndWrite(w, http.StatusOK)
+		break
+	default:
+		utils.MarshalAndWrite(w, http.StatusMethodNotAllowed)
+	}
+}
+
 func (g *Gossiper) handleGetOrigin(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
@@ -94,8 +109,12 @@ func (g *Gossiper) handleGetOrigin(w http.ResponseWriter, r *http.Request) {
 func (g *Gossiper) handleDownload(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
-		g.unmarshalAndForward(r)
-		utils.MarshalAndWrite(w, http.StatusOK)
+		err := g.unmarshalAndForward(r)
+		if err == nil {
+			utils.MarshalAndWrite(w, http.StatusInternalServerError)
+		} else {
+			utils.MarshalAndWrite(w, http.StatusOK)
+		}
 		break
 	default:
 		utils.MarshalAndWrite(w, http.StatusMethodNotAllowed)
@@ -117,6 +136,21 @@ func (g *Gossiper) handleSearchRequest(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (g *Gossiper) handleExport(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		g.unmarshalAndForward(r)
+		utils.MarshalAndWrite(w, http.StatusOK)
+		break
+	case http.MethodGet:
+		export := g.ExportPrivateFiles()
+		w.Write([]byte(export))
+		break
+	default:
+		utils.MarshalAndWrite(w, http.StatusMethodNotAllowed)
+	}
+}
+
 func serveFavicon(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "webpage/favicon.ico")
 }
@@ -131,9 +165,11 @@ func (g *Gossiper) BootstrapUI() {
 	r.HandleFunc("/id", g.handleId).Methods("GET")
 	r.HandleFunc("/origins", g.handleGetOrigin).Methods("GET")
 	r.HandleFunc("/file", g.handleFile).Methods("POST")
+	r.HandleFunc("/privateFile", g.handlePrivateFile).Methods("GET", "POST")
 	r.HandleFunc("/download", g.handleDownload).Methods("POST")
 	r.HandleFunc("/searchRequest", g.handleSearchRequest).Methods("GET", "POST")
 	r.HandleFunc("/favicon.ico", serveFavicon)
+	r.HandleFunc("/export", g.handleExport).Methods("GET", "POST")
 	r.Handle("/", http.FileServer(http.Dir("webpage/"))).Methods("GET")
 	r.PathPrefix("/js/").Handler(http.StripPrefix("/js/", http.FileServer(http.Dir("webpage/js/"))))
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("webpage/static/"))))
