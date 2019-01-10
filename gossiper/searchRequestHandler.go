@@ -95,6 +95,8 @@ func (g *Gossiper) searchRequestHandler(msg utils.SearchRequest, resend bool) {
 func (g *Gossiper) searchForOwnedFiles(msg utils.SearchRequest) utils.SearchReply {
 	results := []*utils.SearchResult{}
 
+	g.storedFilesLock.RLock()
+	defer g.storedFilesLock.RUnlock()
 	for _, v := range g.StoredFiles {
 		for _, name := range msg.Keywords {
 			if strings.Contains(v.Name, name) {

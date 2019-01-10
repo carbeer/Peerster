@@ -28,7 +28,7 @@ func TestHasLessMessagesThan(t *testing.T) {
 }
 
 func TestAdditionalMessages(t *testing.T) {
-	g := gossiper.NewGossiper("127.0.0.4", "D", 5001, 12346, []string{"127.0.0.1:5002"}, false)
+	g := gossiper.NewGossiper("127.0.0.1", "D", 5001, 12346, []string{"127.0.0.1:5002"}, false)
 
 	ps := utils.PeerStatus{Identifier: "A", NextID: 1}
 	sp := utils.StatusPacket{Want: []utils.PeerStatus{ps}}
@@ -50,8 +50,8 @@ func TestAdditionalMessages(t *testing.T) {
 }
 
 func TestTextEncryption(t *testing.T) {
-	g := gossiper.NewGossiper("127.0.0.4", "", 5001, 12346, []string{"127.0.0.1:5002"}, false)
-	g2 := gossiper.NewGossiper("127.0.0.4", "", 5002, 12347, []string{"127.0.0.1:5001"}, false)
+	g := gossiper.NewGossiper("127.0.0.1", "", 5001, 12346, []string{"127.0.0.1:5002"}, false)
+	g2 := gossiper.NewGossiper("127.0.0.1", "", 5002, 12347, []string{"127.0.0.1:5001"}, false)
 	s := "Hi"
 	ctext := gossiper.RSAEncryptText(g.Name, s)
 	if ctext == s {
@@ -71,14 +71,28 @@ func TestTextEncryption(t *testing.T) {
 }
 
 func TestReplicationReferencing(t *testing.T) {
-	g := gossiper.NewGossiper("127.0.0.4", "", 5001, 12346, []string{"127.0.0.1:5002"}, false)
+	g := gossiper.NewGossiper("127.0.0.1", "", 5001, 12346, []string{"127.0.0.1:5002"}, false)
 	m := utils.Message{FileName: "lol.txt", Replications: 5}
-	g.PrivateFileIndexing(m)
+	g2 := gossiper.NewGossiper("127.0.0.1", "", 5002, 12347, []string{"127.0.0.1:5001"}, false)
+	m2 := utils.Message{FileName: "bla.txt", Replications: 2}
+	go g.PrivateFileIndexing(m)
+	go g2.PrivateFileIndexing(m2)
 	<-time.After(5 * time.Second)
 
 	for key, val := range g.Replications {
 		if key != val.Metafilehash {
 			t.Errorf(fmt.Sprintf("Got mismatching metafilehashes: %s vs %s", key, val.Metafilehash))
+		}
+		g.AssignReplica(key, val.NodeID, "yoooo")
+	}
+
+	for key, _ := range g.PrivFiles {
+		log.Printf("%+v\n", g.PrivFiles[key])
+		for i, v := range g.PrivFiles[key].Replications {
+			log.Printf("%p vs %p", g.Replications[v.Metafilehash], &g.PrivFiles[key].Replications[i])
+			if g.Replications[v.Metafilehash] != &g.PrivFiles[key].Replications[i] {
+				t.Errorf(fmt.Sprintf("Got mismatching pointers: %p vs %p", g.Replications[v.Metafilehash], &g.PrivFiles[key].Replications[i]))
+			}
 		}
 	}
 }
