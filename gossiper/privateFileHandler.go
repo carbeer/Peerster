@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"time"
@@ -138,7 +139,7 @@ func (g *Gossiper) fileExchangeRequestHandler(msg utils.FileExchangeRequest, sen
 func (g *Gossiper) holdingFileExchangeRequest(msg utils.FileExchangeRequest, r utils.Replica) {
 	msg.ExchangeMetaFileHash = r.Metafilehash
 	g.setFileExchangeChannel(msg.MetaFileHash, make(chan utils.FileExchangeRequest, utils.MSG_BUFFER))
-	timeout := time.After(utils.FILE_EXCHANGE_TIMEOUT)
+	timeout := time.After(utils.FILE_EXCHANGE_TIMEOUT * time.Second)
 	select {
 	case <-timeout:
 		g.freeReplica(r.Metafilehash)
@@ -171,11 +172,10 @@ func (g *Gossiper) establishFileExchange(msg utils.FileExchangeRequest, initiati
 	interval := utils.FILE_EXCHANGE_TIMEOUT
 
 	for {
-		log.Println("Still in the loop")
-		<-time.After(interval)
+		<-time.After(time.Duration(interval) * time.Second)
 		g.poseChallenge(ownRep)
 		fmt.Printf("Sending out PoR request\n")
-		timeout := time.After(utils.FILE_EXCHANGE_TIMEOUT)
+		timeout := time.After(utils.FILE_EXCHANGE_TIMEOUT * time.Second)
 		select {
 		case <-timeout:
 			fmt.Printf("Peer failed to respond\n")
@@ -185,7 +185,7 @@ func (g *Gossiper) establishFileExchange(msg utils.FileExchangeRequest, initiati
 		case msg := <-g.getChallengeChannel(ownRep.Metafilehash):
 			if g.verifyChallenge(msg) {
 				fmt.Printf("Peer solved the challenge.\n")
-				interval *= 2
+				interval *= (1 + rand.Intn(1))
 			} else {
 				fmt.Printf("Peer solved the challenge incorrectly.\n")
 				interval = utils.FILE_EXCHANGE_TIMEOUT

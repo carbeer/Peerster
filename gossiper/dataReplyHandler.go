@@ -69,7 +69,7 @@ func (g *Gossiper) receiveDataReply(msg utils.DataReply) {
 		g.reconstructFile(reqChunk.MetaHash)
 		return
 	}
-	destAvailable := g.getDesintationSpecified(stringHashValue)
+	destAvailable := g.getDestinationSpecified(stringHashValue)
 	if !destAvailable {
 		g.sendDataRequest(utils.Message{Request: g.popRequestedChunks(stringHashValue).NextHash}, g.getChunkHolder(reqChunk.MetaHash, (reqChunk.ChunkNr+1)))
 	} else {

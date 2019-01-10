@@ -248,7 +248,7 @@ func (g *Gossiper) getDataRequestChannel(key string) chan bool {
 	return val
 }
 
-func (g *Gossiper) getDesintationSpecified(key string) bool {
+func (g *Gossiper) getDestinationSpecified(key string) bool {
 	g.dataRequestChannelLock.RLock()
 	fmt.Printf("Querying destination specified\n")
 	val := g.destinationSpecified[key]
@@ -266,9 +266,8 @@ func (g *Gossiper) setDataRequestChannel(key string, value chan bool, addValue b
 
 func (g *Gossiper) deleteDataRequestChannel(key string) {
 	g.dataRequestChannelLock.Lock()
-	fmt.Printf("Deleting data request channel and destination specified\n")
+	fmt.Printf("Deleting data request channel\n")
 	delete(g.dataRequestChannel, key)
-	delete(g.destinationSpecified, key)
 	g.dataRequestChannelLock.Unlock()
 }
 
