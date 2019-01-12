@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/carbeer/Peerster/utils"
@@ -83,56 +84,68 @@ func (g *Gossiper) newFileExchangeRequest(reps []utils.Replica) {
 }
 
 func (g *Gossiper) fileExchangeRequestHandler(msg utils.FileExchangeRequest, sender string) {
+	wg := sync.WaitGroup{}
 	g.updateNextHop(msg.Origin, 0, sender)
 
 	fmt.Printf("Received fileExchangeRequest: %+v\n", msg)
+	if msg.Origin == g.Name {
+		return
+	}
 	switch msg.Status {
 	case "OFFER":
-		if msg.Origin == g.Name {
-			return
-		}
 		fmt.Println("OFFER")
 		r := g.scanOpenFileExchanges(msg.Origin)
-		// Not interested - Forward
-		if r.Metafilehash == "" {
-			fmt.Println("Not interested")
-			msg.HopLimit--
-			if msg.HopLimit <= 0 {
-				return
-			}
-			gp := utils.GossipPacket{FileExchangeRequest: &msg}
-			g.broadcastMessage(gp, sender)
-			// Interested - Create channel
-		} else {
+		// Interested - Create channel
+		if r.Metafilehash != "" {
 			fmt.Println("Interested, create channel")
-			if e := g.AssignReplica(r.Metafilehash, msg.Origin, msg.MetaFileHash); e != nil {
-				fmt.Println("Couldn't assign replica")
+			if e := g.AssignReplica(r.Metafilehash, msg.Origin, msg.MetaFileHash); e == nil {
+				resp := utils.FileExchangeRequest{Origin: g.Name, Destination: msg.Origin, Status: "ACCEPT", MetaFileHash: msg.MetaFileHash, ExchangeMetaFileHash: r.Metafilehash, HopLimit: utils.HOPLIMIT_CONSTANT}
+				gp := utils.GossipPacket{FileExchangeRequest: &resp}
+				fmt.Printf("%s nextHop for %s\n", g.getNextHop(msg.Origin).Address, msg.Origin)
+				wg.Add(1)
+				go func(gp utils.GossipPacket, msg utils.FileExchangeRequest) {
+					g.sendToPeer(gp, g.getNextHop(msg.Origin).Address)
+					fmt.Printf("Sent out msg %+v\n", gp.FileExchangeRequest)
+					g.holdingFileExchangeRequest(msg, r)
+					wg.Done()
+				}(gp, msg)
+				wg.Wait()
 				return
 			}
-			resp := utils.FileExchangeRequest{Origin: g.Name, Destination: msg.Origin, Status: "ACCEPT", MetaFileHash: msg.MetaFileHash, ExchangeMetaFileHash: r.Metafilehash, HopLimit: utils.HOPLIMIT_CONSTANT}
-			gp := utils.GossipPacket{FileExchangeRequest: &resp}
-			fmt.Printf("%s nextHop for %s\n", g.getNextHop(msg.Origin).Address, msg.Origin)
-			go g.sendToPeer(gp, g.getNextHop(msg.Origin).Address)
-			g.holdingFileExchangeRequest(msg, r)
+			fmt.Println("Couldn't assign replica")
+		} else {
+			fmt.Println("Not interested")
 		}
 		break
 	case "ACCEPT":
-		fmt.Println("ACCEPT")
-		if g.checkReplicationAtPeer(msg.MetaFileHash, msg.Origin) {
+		if msg.Destination == g.Name {
+			fmt.Println("ACCEPT")
+			if g.checkReplicationAtPeer(msg.MetaFileHash, msg.Origin) {
+				return
+			}
+			if e := g.AssignReplica(msg.MetaFileHash, msg.Origin, msg.ExchangeMetaFileHash); e != nil {
+				return
+			}
+			resp := utils.FileExchangeRequest{Origin: g.Name, Destination: msg.Origin, Status: "FIX", MetaFileHash: msg.MetaFileHash, ExchangeMetaFileHash: msg.ExchangeMetaFileHash, HopLimit: utils.HOPLIMIT_CONSTANT}
+			gp := utils.GossipPacket{FileExchangeRequest: &resp}
+			go g.sendToPeer(gp, g.getNextHop(resp.Destination).Address)
+			g.establishFileExchange(msg, true)
 			return
 		}
-		if e := g.AssignReplica(msg.MetaFileHash, msg.Origin, msg.ExchangeMetaFileHash); e != nil {
-			return
-		}
-		resp := utils.FileExchangeRequest{Origin: g.Name, Destination: msg.Origin, Status: "FIX", MetaFileHash: msg.MetaFileHash, ExchangeMetaFileHash: msg.ExchangeMetaFileHash, HopLimit: utils.HOPLIMIT_CONSTANT}
-		gp := utils.GossipPacket{FileExchangeRequest: &resp}
-		go g.sendToPeer(gp, g.getNextHop(resp.Destination).Address)
-		g.establishFileExchange(msg, true)
 		break
 	case "FIX":
-		g.sendToFileExchangeChannel(msg.MetaFileHash, msg)
-		break
+		if msg.Destination == g.Name {
+			g.sendToFileExchangeChannel(msg.MetaFileHash, msg)
+			return
+		}
 	}
+	// Not interested - Forward
+	msg.HopLimit--
+	if msg.HopLimit <= 0 {
+		return
+	}
+	gp := utils.GossipPacket{FileExchangeRequest: &msg}
+	g.broadcastMessage(gp, sender)
 }
 
 // Blocks NodeID until timeout is reached
@@ -142,6 +155,7 @@ func (g *Gossiper) holdingFileExchangeRequest(msg utils.FileExchangeRequest, r u
 	timeout := time.After(utils.FILE_EXCHANGE_TIMEOUT * time.Second)
 	select {
 	case <-timeout:
+		fmt.Println("Timeout in holdingFileExchangeRequest")
 		g.freeReplica(r.Metafilehash)
 		g.deleteFileExchangeChannel(msg.MetaFileHash)
 		break
@@ -193,7 +207,7 @@ func (g *Gossiper) establishFileExchange(msg utils.FileExchangeRequest, initiati
 			}
 		}
 		if fails > utils.CHALLENGE_FAIL_THRESHOLD {
-			fmt.Printf("Peer failed too many times. Removing the reference now.\n")
+			fmt.Println("Peer failed too many times. Removing the reference now.\n")
 			g.removeFile(otherMFH)
 			g.freeReplica(ownRep.Metafilehash)
 			return

@@ -18,7 +18,7 @@ func (g *Gossiper) challengeHandler(msg utils.Challenge, sender string) {
 			return
 		}
 		gp := utils.GossipPacket{Challenge: &msg}
-		g.sendToPeer(gp, msg.Destination)
+		g.sendToPeer(gp, g.getNextHop(msg.Destination).Address)
 		return
 	}
 	// Challenge response

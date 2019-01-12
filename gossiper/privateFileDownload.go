@@ -2,6 +2,7 @@ package gossiper
 
 import (
 	"errors"
+	"log"
 	"time"
 
 	"github.com/carbeer/Peerster/utils"
@@ -36,5 +37,8 @@ func (g *Gossiper) downloadReplica(r utils.Replica, name string) error {
 		utils.DecryptFile(r, name)
 	}
 	delete(g.fileDownloadChannel, r.Metafilehash)
+	if err == nil {
+		log.Println("Succesfully downloaded the file", name)
+	}
 	return err
 }
