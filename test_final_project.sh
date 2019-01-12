@@ -10,7 +10,8 @@ NC='\033[0m'
 DEBUG="true"
 
 outputFiles=()
-message=Weather_is_clear
+message1=How_are_you
+message2=All_good
 
 
 file1="file1.txt"
@@ -26,7 +27,7 @@ rt=5
 # General peerster (gossiper) command
 #./Peerster -UIPort=12345 -gossipAddr=127.0.0.1:5001 -name=A -peers=127.0.0.1:5002 > A.out &
 
-for i in `seq 1 3`;
+for i in `seq 1 2`;
 do
 	outFileName="$name.out"
 	peerPort=$((($gossipPort+1)%10+5000))
@@ -51,12 +52,11 @@ printf "${COLOR}Uploading private file with 4 replications${NC}\n"
 
 sleep 3
 
-printf "${COLOR}Uploading another two private files with 3 and 2 replications${NC}\n"
-./client/client -UIPort=12345 -file=$file2 -private -replications=3 
+printf "${COLOR}Uploading another private file with 2 replications${NC}\n"
 ./client/client -UIPort=12346 -file=$file3 -private -replications=2
 
-printf "${COLOR}Press any key to replace the current UI gossiper with a new instance...${NC}\n"
 read varname
+printf "${COLOR}Replacing the current UI gossiper with a new instance...${NC}\n"
 
 # Kill the peer that serves the UI
 kill -KILL $last_pid
@@ -66,8 +66,8 @@ sleep 1
 ./Peerster -UIPort=12354 -gossipAddr=127.0.0.1:5009 -peers=127.0.0.1:5000 -rtimer=$rt -runUI > "UIPeer2.out" &
 sleep 1
 
-printf "${COLOR}Press any key to send a private message to the UI peer...${NC}\n"
 read varname
+printf "${COLOR}Sending a private message and a private encrypted message to the UI peer...${NC}\n"
 
 
 # read out name of the UI peer (only needed due to public key generation at runtime)
@@ -75,9 +75,10 @@ pubkey=$(awk -F":" '$0~/Generated and/{print $NF;exit;}' ./UIPeer2.out) || true
 pubkey="${pubkey#"${pubkey%%[![:space:]]*}"}" || true
 
 # Send private message
-./client/client -UIPort=12345 -dest=$pubkey -msg=$message
+./client/client -UIPort=12345 -dest=$pubkey -msg=$message1
+./client/client -UIPort=12345 -dest=$pubkey -msg=$message2  -encrypt
 
-printf "${COLOR}Press any key to end Peerster...${NC}\n "
 read varname
+printf "${COLOR}Ending Peerster...${NC}\n "
 
 pkill -f Peerster
