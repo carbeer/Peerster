@@ -66,9 +66,10 @@
 } 
 \author{}
 \date{}
-
 %----------------------------------------------------------------------------------------
 \begin{document}
+\definecolor{mblue}{rgb}{0.27,0.33,0.53}
+
 \setminted[go]{    
 frame=lines,
 framesep=2mm,
@@ -135,16 +136,16 @@ The goal of this final project implementation is to enable Private File storage 
 
 \elem{Private file upload}
 To describe private files, we introduce a new struct \texttt{PrivateFile}. Private files are similar to the Files that we have previously used. However, the result of the file indexing process will not be published, i.e. not included in the blockchain and not returned as result of search requests. 
-Besides the File struct that we used in previous homeworks, \texttt{Replica} are used to represent the storage of a file at another peer. Each replica instance represents an AES encrypted version of the original file. For each \texttt{Replica} another \texttt{EncryptionKey} is used, the reason for this will be explained lateron in the paragraph targeting Proof of Retrievability. Right after the indexing of the file, the variables \texttt{NodeID} and \texttt{ExchangeMFH} are empty as the replications are only stored locally at this point. \\\vspace{0.5em}
+Besides the \texttt{File} struct that we used in previous homeworks, \texttt{Replica} are used to represent the storage of a file at another peer. Each replica instance represents an AES encrypted version of the original file. For each \texttt{Replica} another \texttt{EncryptionKey} is used, the reason for this will be explained lateron in the paragraph targeting Proof of Retrievability. Right after the indexing of the file, the variables \texttt{NodeID} and \texttt{ExchangeMFH} are empty as the replications are only stored locally at this point. \\\vspace{0.5em}
 
 \begin{listing}
-\begin{minted}{go}
-type PrivateFile struct {
+\begin{minted}[escapeinside=||]{go}
+type |\textcolor{mblue}{PrivateFile}| struct {
 	File
-	Replications []Replica
+	Replications []|\textcolor{mblue}{Replica}|
 }
 
-type Replica struct {
+type |\textcolor{mblue}{Replica}| struct {
 	NodeID          string // Name of the remote peer storing the file
 	EncryptionKey   []byte // AES Encryption key
 	ExchangeMFH     string // Exchange Metafilehash
@@ -165,8 +166,8 @@ To distribute the file among the network, a process resembling a three-way hands
 \end{enumerate}
 
 \begin{listing}
-\begin{minted}{go}
-type FileExchangeRequest struct {
+\begin{minted}[escapeinside=||]{go}
+type |\textcolor{mblue}{FileExchangeRequest}| struct {
 	Origin               string 
 	Destination          string // Empty for OFFER, i.e. the initial broadcast
 	Status               string // OFFER, ACCEPT, FIX
@@ -192,8 +193,8 @@ To decrease communication overhead, the intervals in which the PoR are performed
 To ensure that peers cannot collude to solve the challenges, each \texttt{Replica} is encrypted using a different key.  
 
 \begin{listing}
-\begin{minted}{go}
-type Challenge struct {
+\begin{minted}[escapeinside=||]{go}
+type |\textcolor{mblue}{Challenge}| struct {
 	Origin       string
 	Destination  string
 	MetaFileHash string
