@@ -26,6 +26,7 @@ type PrivateMessage struct {
 	EncryptedText string
 	Destination   string
 	HopLimit      uint32
+	Signature     []byte `json:"-"`
 }
 
 type DataRequest struct {

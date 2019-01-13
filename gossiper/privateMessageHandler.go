@@ -13,6 +13,7 @@ func (g *Gossiper) newEncryptedPrivateMessage(msg utils.Message) {
 	g.appendPrivateMessages(g.Name, privateMessage)
 	// Encrypt prior to sending
 	privateMessage.EncryptedText = RSAEncryptText(msg.Destination, msg.Text)
+	privateMessage = g.RSASignPM(privateMessage)
 	gossipMessage := utils.GossipPacket{Private: &privateMessage}
 	g.sendToPeer(gossipMessage, g.getNextHop(msg.Destination).Address)
 }
@@ -22,12 +23,17 @@ func (g *Gossiper) newPrivateMessage(msg utils.Message) {
 	gossipMessage := utils.GossipPacket{Private: &privateMessage}
 	fmt.Printf("SENDING PRIVATE MESSAGE %s TO %s\n", msg.Text, msg.Destination)
 	g.appendPrivateMessages(g.Name, privateMessage)
+
 	g.sendToPeer(gossipMessage, g.getNextHop(msg.Destination).Address)
 }
 
 func (g *Gossiper) privateMessageHandler(msg utils.PrivateMessage) {
 	if msg.Destination == g.Name {
 		if msg.EncryptedText != "" {
+			if !g.RSAVerifyPMSignature(msg) {
+				fmt.Printf("The message didn't have a valid signature. Discarding it now.\n")
+				return
+			}
 			msg.EncryptedText = g.RSADecryptText(msg.EncryptedText)
 			fmt.Printf("PRIVATE ENCRYPTED origin %s hop-limit %d contents %s\n", msg.Origin, msg.HopLimit, msg.EncryptedText)
 		}

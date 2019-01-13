@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/hex"
+	"encoding/json"
 	"math"
 
 	"github.com/carbeer/Peerster/utils"
@@ -45,4 +46,40 @@ func (g *Gossiper) RSADecryptText(ctext string) string {
 		i = j
 	}
 	return text
+}
+
+func (g *Gossiper) RSASignPM(msg utils.PrivateMessage) utils.PrivateMessage {
+	hash := utils.HASH_ALGO.New()
+
+	bytes, e := json.Marshal(msg)
+	utils.HandleError(e)
+	hash.Write(bytes)
+	hashed := hash.Sum(nil)
+
+	signature, e := rsa.SignPKCS1v15(rand.Reader, &g.privateKey, utils.HASH_ALGO, hashed)
+	utils.HandleError(e)
+	msg.Signature = signature
+	return msg
+}
+
+func (g *Gossiper) RSAVerifyPMSignature(msg utils.PrivateMessage) bool {
+	hash := utils.HASH_ALGO.New()
+
+	bytes, e := json.Marshal(msg)
+	utils.HandleError(e)
+	hash.Write(bytes)
+	hashed := hash.Sum(nil)
+
+	pubKeyBytes, e := hex.DecodeString(msg.Origin)
+	utils.HandleError(e)
+	pubKey, e := x509.ParsePKCS1PublicKey(pubKeyBytes)
+	utils.HandleError(e)
+
+	e = rsa.VerifyPKCS1v15(pubKey, utils.HASH_ALGO, hashed, msg.Signature)
+	utils.HandleError(e)
+	if e == nil {
+		return true
+	} else {
+		return false
+	}
 }

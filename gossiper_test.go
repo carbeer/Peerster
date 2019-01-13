@@ -72,9 +72,9 @@ func TestTextEncryption(t *testing.T) {
 
 func TestReplicationReferencing(t *testing.T) {
 	g := gossiper.NewGossiper("127.0.0.1", "", 5001, 12346, []string{"127.0.0.1:5002"}, false)
-	m := utils.Message{FileName: "lol.txt", Replications: 5}
+	m := utils.Message{FileName: "file1.txt", Replications: 5}
 	g2 := gossiper.NewGossiper("127.0.0.1", "", 5002, 12347, []string{"127.0.0.1:5001"}, false)
-	m2 := utils.Message{FileName: "bla.txt", Replications: 2}
+	m2 := utils.Message{FileName: "file2.txt", Replications: 2}
 	go g.PrivateFileIndexing(m)
 	go g2.PrivateFileIndexing(m2)
 	<-time.After(5 * time.Second)
@@ -94,5 +94,15 @@ func TestReplicationReferencing(t *testing.T) {
 				t.Errorf(fmt.Sprintf("Got mismatching pointers: %p vs %p", g.Replications[v.Metafilehash], &g.PrivFiles[key].Replications[i]))
 			}
 		}
+	}
+}
+
+func TestSignatures(t *testing.T) {
+	g := gossiper.NewGossiper("127.0.0.1", "", 5001, 12346, []string{"127.0.0.1:5002"}, false)
+	pm := utils.PrivateMessage{Origin: g.Name, ID: 0, EncryptedText: "blablabla", Destination: g.Name, HopLimit: utils.HOPLIMIT_CONSTANT}
+	pm.EncryptedText = gossiper.RSAEncryptText(g.Name, pm.EncryptedText)
+	pm = g.RSASignPM(pm)
+	if !g.RSAVerifyPMSignature(pm) {
+		t.Errorf("Signature not valid")
 	}
 }
