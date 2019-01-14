@@ -8,6 +8,7 @@ import (
 	"github.com/carbeer/Peerster/utils"
 )
 
+// Handles incoming SearchReplies
 func (g *Gossiper) searchReplyHandler(msg utils.SearchReply) {
 	if msg.Destination == g.Name {
 		g.getMatchingSearchRequests(msg)
@@ -21,8 +22,8 @@ func (g *Gossiper) searchReplyHandler(msg utils.SearchReply) {
 	}
 }
 
+// Checks whether the SearchRequest was already processed within the past
 func (g *Gossiper) getMatchingSearchRequests(key utils.SearchReply) {
-
 	g.cachedSearchRequestsLock.Lock()
 	for _, v := range g.CachedSearchRequests {
 		if v.Request.Origin != g.Name {

@@ -11,6 +11,7 @@ import (
 	"github.com/carbeer/Peerster/utils"
 )
 
+// Index a public file
 func (g *Gossiper) indexFile(msg utils.Message) {
 	fmt.Printf("REQUESTING INDEXING filename %s\n", msg.FileName)
 	var hashFunc = crypto.SHA256.New()
@@ -24,6 +25,7 @@ func (g *Gossiper) indexFile(msg utils.Message) {
 	fileSize := fileInfo.Size()
 	noChunks := int(math.Ceil(float64(fileSize) / float64(utils.CHUNK_SIZE)))
 
+	// Generate chunk hashes
 	for i := 0; i < noChunks; i++ {
 		hashFunc.Reset()
 		chunk := utils.GetNextDataChunk(file, utils.CHUNK_SIZE)
@@ -45,5 +47,6 @@ func (g *Gossiper) indexFile(msg utils.Message) {
 	g.addStoredChunk(metaHash, chunkHashed)
 	fmt.Printf("Indexed File with Metahash %s\n", metaHash)
 	g.setStoredFile(utils.StringHash(hashFunc.Sum(nil)), utils.File{Name: msg.FileName, MetafileHash: utils.ByteMetaHash(metaHash), Size: fileSize})
+	// Publish indexed file
 	g.txPublishHandler(utils.TxPublish{File: utils.File{Name: msg.FileName, MetafileHash: utils.ByteMetaHash(metaHash), Size: fileSize}, HopLimit: utils.TX_PUBLISH_HOP_LIMIT + 1}, "")
 }

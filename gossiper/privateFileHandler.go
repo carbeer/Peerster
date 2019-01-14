@@ -14,6 +14,7 @@ import (
 	"github.com/carbeer/Peerster/utils"
 )
 
+// Index a file privately: Do not publish it to the blockchain but broadcast FileExchangeRequests instead
 func (g *Gossiper) PrivateFileIndexing(msg utils.Message) {
 	if msg.Replications == -1 {
 		msg.Replications = 0
@@ -28,9 +29,10 @@ func (g *Gossiper) PrivateFileIndexing(msg utils.Message) {
 	fileSize := fileInfo.Size()
 	noChunks := utils.CeilIntDiv(int(fileSize), utils.CHUNK_SIZE)
 
-	// First replication is without encryption --> original file
+	// First replication is without encryption --> original file which will be stored locally
 	r := make([]utils.Replica, msg.Replications+1)
 
+	// Create replications
 	for j := 0; j <= msg.Replications; j++ {
 		_, e := file.Seek(0, 0)
 		utils.HandleError(e)
@@ -69,10 +71,12 @@ func (g *Gossiper) PrivateFileIndexing(msg utils.Message) {
 
 	f := utils.File{Name: msg.FileName, MetafileHash: utils.ByteMetaHash(r[0].Metafilehash), Size: fileSize}
 	p := utils.PrivateFile{File: f, Replications: r[1:]}
+	// Store seperately from other files and trigger exchange requests
 	g.addPrivateFile(p)
 	g.newFileExchangeRequest(r[1:])
 }
 
+// Trigger broadcast of a FileExchangeRequest for each replica
 func (g *Gossiper) newFileExchangeRequest(reps []utils.Replica) {
 	for _, i := range reps {
 		g.setFileExchangeChannel(i.Metafilehash, make(chan utils.FileExchangeRequest, utils.MSG_BUFFER))
@@ -83,6 +87,7 @@ func (g *Gossiper) newFileExchangeRequest(reps []utils.Replica) {
 	}
 }
 
+// Handles incoming FileExchangeRequest messages
 func (g *Gossiper) fileExchangeRequestHandler(msg utils.FileExchangeRequest, sender string) {
 	wg := sync.WaitGroup{}
 	g.updateNextHop(msg.Origin, 0, sender)
@@ -95,17 +100,14 @@ func (g *Gossiper) fileExchangeRequestHandler(msg utils.FileExchangeRequest, sen
 	case "OFFER":
 		fmt.Println("OFFER")
 		r := g.scanOpenFileExchanges(msg.Origin)
-		// Interested - Create channel
 		if r.Metafilehash != "" {
 			fmt.Println("Interested, create channel")
 			if e := g.AssignReplica(r.Metafilehash, msg.Origin, msg.MetaFileHash); e == nil {
 				resp := utils.FileExchangeRequest{Origin: g.Name, Destination: msg.Origin, Status: "ACCEPT", MetaFileHash: msg.MetaFileHash, ExchangeMetaFileHash: r.Metafilehash, HopLimit: utils.HOPLIMIT_CONSTANT}
 				gp := utils.GossipPacket{FileExchangeRequest: &resp}
-				fmt.Printf("%s nextHop for %s\n", g.getNextHop(msg.Origin).Address, msg.Origin)
 				wg.Add(1)
 				go func(gp utils.GossipPacket, msg utils.FileExchangeRequest) {
 					g.sendToPeer(gp, g.getNextHop(msg.Origin).Address)
-					fmt.Printf("Sent out msg %+v\n", gp.FileExchangeRequest)
 					g.holdingFileExchangeRequest(msg, r)
 					wg.Done()
 				}(gp, msg)
@@ -120,9 +122,11 @@ func (g *Gossiper) fileExchangeRequestHandler(msg utils.FileExchangeRequest, sen
 	case "ACCEPT":
 		if msg.Destination == g.Name {
 			fmt.Println("ACCEPT")
+			// Check if peer already stores a replication of that private file
 			if g.checkReplicationAtPeer(msg.MetaFileHash, msg.Origin) {
 				return
 			}
+			// Assign Replica. Discard message if the Replica is already assigned to another file.
 			if e := g.AssignReplica(msg.MetaFileHash, msg.Origin, msg.ExchangeMetaFileHash); e != nil {
 				return
 			}
@@ -148,7 +152,7 @@ func (g *Gossiper) fileExchangeRequestHandler(msg utils.FileExchangeRequest, sen
 	g.broadcastMessage(gp, sender)
 }
 
-// Blocks NodeID until timeout is reached
+// Blocks NodeID until timeout is reached so that not multiple ACCEPTS are sent out for the same instance
 func (g *Gossiper) holdingFileExchangeRequest(msg utils.FileExchangeRequest, r utils.Replica) {
 	msg.ExchangeMetaFileHash = r.Metafilehash
 	g.setFileExchangeChannel(msg.MetaFileHash, make(chan utils.FileExchangeRequest, utils.MSG_BUFFER))
@@ -161,12 +165,14 @@ func (g *Gossiper) holdingFileExchangeRequest(msg utils.FileExchangeRequest, r u
 		break
 	case resp := <-g.getFileExchangeChannel(msg.MetaFileHash):
 		if resp.Status == "FIX" {
-			log.Println("No timeout, received fix response.")
+			fmt.Println("No timeout, received fix response.")
 			g.establishFileExchange(resp, false)
 		}
 	}
 }
 
+// Triggered once a noce received an ACCEPT or FIX status.
+// --> Begin to download the peer's file and start sending out and keeping track of challenges.
 func (g *Gossiper) establishFileExchange(msg utils.FileExchangeRequest, initiatingNode bool) {
 	fmt.Println("Establishing file Exchange", initiatingNode)
 	var fails int
@@ -196,6 +202,7 @@ func (g *Gossiper) establishFileExchange(msg utils.FileExchangeRequest, initiati
 			interval = utils.FILE_EXCHANGE_TIMEOUT
 			fails++
 			break
+		// Receive challenge response
 		case msg := <-g.getChallengeChannel(ownRep.Metafilehash):
 			if g.verifyChallenge(msg) {
 				fmt.Printf("Peer solved the challenge.\n")
@@ -207,7 +214,7 @@ func (g *Gossiper) establishFileExchange(msg utils.FileExchangeRequest, initiati
 			}
 		}
 		if fails > utils.CHALLENGE_FAIL_THRESHOLD {
-			fmt.Println("Peer failed too many times. Removing the reference now.\n")
+			fmt.Printf("Peer failed too many times. Removing the reference now.\n")
 			g.removeFile(otherMFH)
 			g.freeReplica(ownRep.Metafilehash)
 			return
@@ -215,6 +222,7 @@ func (g *Gossiper) establishFileExchange(msg utils.FileExchangeRequest, initiati
 	}
 }
 
+// Removes all chunks of a stored file
 func (g *Gossiper) removeFile(mfh string) {
 	fmt.Println("Removing the file with metafilehash", mfh)
 	metaFile := g.getStoredChunk(mfh)

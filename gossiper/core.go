@@ -14,53 +14,41 @@ import (
 )
 
 type Gossiper struct {
-	// Address ip:port on which the Gossiper instance runs
-	Address net.UDPAddr
-	Name    string
-	// Addresses of all peers
-	Peers     []string
-	Simple    bool
-	IdCounter uint32
-	// Sorted list of received messages
-	ReceivedMessages map[string][]utils.RumorMessage
-	PrivateMessages  map[string][]utils.PrivateMessage
-	// By metahash
-	ExternalFiles        map[string]*utils.ExternalFile
-	CachedSearchRequests map[string]utils.CachedRequest
-	ChronRumorMessages   []utils.StoredMessage
-	ChronPrivateMessages map[string][]utils.StoredMessage
-	ChronReceivedFiles   []*utils.ExternalFile
-	// next hop map Origin --> Address
-	NextHop map[string]utils.HopInfo
-	// Get utils.File by Metahash
-	StoredFiles  map[string]utils.File
-	StoredChunks map[string][]byte
-	BlockHistory map[utils.Hash]utils.BlockWrapper
-	// Get block by hash of the previour block
-	DetachedBlocks      map[utils.Hash]utils.Block
-	LastBlock           utils.BlockWrapper
-	PendingTransactions []utils.TxPublish
-	ReceivedBlock       bool
-	PrivFiles           map[string]utils.PrivateFile
+	Address              net.UDPAddr                       // Address ip:port on which the Gossiper instance runs
+	Name                 string                            // Identifier of the Gossiper
+	Peers                []string                          // Addresses of all peers
+	Simple               bool                              // Flag for Simple mode (use only simple messages)
+	IdCounter            uint32                            // Counter for messageIDs
+	ReceivedMessages     map[string][]utils.RumorMessage   // Sorted list of received messages by Name
+	PrivateMessages      map[string][]utils.PrivateMessage // Private messages by Name
+	ExternalFiles        map[string]*utils.ExternalFile    // By metahash
+	CachedSearchRequests map[string]utils.CachedRequest    // By Name
+	ChronRumorMessages   []utils.StoredMessage             // Chronologically stored rumor messages
+	ChronPrivateMessages map[string][]utils.StoredMessage  // Chronologically stored private messages by Name
+	ChronReceivedFiles   []*utils.ExternalFile             // Chronologically stored external files
+	NextHop              map[string]utils.HopInfo          // next hop map returning Address by Name
+	StoredFiles          map[string]utils.File             // utils.File by Metahash
+	StoredChunks         map[string][]byte                 // Stored chunk data by chunk hash
+	BlockHistory         map[utils.Hash]utils.BlockWrapper // Block by hash of the previous block
+	DetachedBlocks       map[utils.Hash]utils.Block        // Detached block (not in main fork) by previous block hash
+	LastBlock            utils.BlockWrapper                // Currently last block in the main fork of the chain
+	PendingTransactions  []utils.TxPublish                 // Transactions to be mined in a block
+	ReceivedBlock        bool                              // Bool val indicating whether gossiper already received a block
+	PrivFiles            map[string]utils.PrivateFile      // PrivateFile by metafilehash
+	Replications         map[string]*utils.Replica         `json:"-"` // Map of chunk hashes to Replica pointers (of PrivateFiles)
 
-	// UDP connection for peers
-	udpConn net.UDPConn
-	// Client connecteion (UI)
-	clientConn net.UDPConn
-	// Identifier of the Gossiper
-	miner chan bool
-	// Tracks the status packets from rumorMongerings owned by this peer
-	rumorMongeringChannel map[string]chan utils.StatusPacket
-	dataRequestChannel    map[string]chan bool
-	destinationSpecified  map[string]bool
-	searchRequestChannel  map[string]chan uint32
-	fileDownloadChannel   map[string]chan bool
-	// The next hash to be requested given the current hash
-	requestedChunks     map[string]utils.ChunkInfo
-	privateKey          rsa.PrivateKey
-	fileExchangeChannel map[string]chan utils.FileExchangeRequest
-	challengeChannel    map[string]chan utils.Challenge
-	Replications        map[string]*utils.Replica `json:"-"`
+	udpConn               net.UDPConn                               // UDP connection for peers
+	clientConn            net.UDPConn                               // Client connecteion (UI)
+	miner                 chan bool                                 // Channel to notify the continously running miner
+	rumorMongeringChannel map[string]chan utils.StatusPacket        // Tracks the status packets from rumorMongerings owned by this peer
+	dataRequestChannel    map[string]chan bool                      // Channel by chunk hash, just to notify the process
+	destinationSpecified  map[string]bool                           // By Name, returns whether file is downloaded from a specific node or from the entire network
+	searchRequestChannel  map[string]chan uint32                    // Channel by SearchRequest keyword identifier, returns number of successful search requests
+	fileDownloadChannel   map[string]chan bool                      // Channel by metahash, just to notify the process
+	requestedChunks       map[string]utils.ChunkInfo                // The next hash to be requested given the current hash
+	privateKey            rsa.PrivateKey                            // private RSA key
+	fileExchangeChannel   map[string]chan utils.FileExchangeRequest // Channel by metafilehash, sends the FileExchangeRequest to the running process
+	challengeChannel      map[string]chan utils.Challenge           // Channel by metafilehash, sends Challenge responses to running process
 
 	// Locks for maps
 	receivedMessagesLock      sync.RWMutex
@@ -152,6 +140,8 @@ func NewGossiper(gossipIp, name string, gossipPort, clientPort int, peers []stri
 	return g
 }
 
+// Restore gossiper from stored state
+// NOT WORKING PROPERLY
 func RestoreGossiper(gossipIp, name string, gossipPort, clientPort int, peers []string) *Gossiper {
 	g := LoadState(name)
 	udpAddr, e := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", gossipIp, gossipPort))
@@ -204,6 +194,7 @@ func RestoreGossiper(gossipIp, name string, gossipPort, clientPort int, peers []
 	return g
 }
 
+// Send a packet to the neighbor with address targetIpPort
 func (g *Gossiper) sendToPeer(gossipPacket utils.GossipPacket, targetIpPort string) {
 	if targetIpPort == "" {
 		fmt.Printf("No target address given. Not sending this message: %+v.\n", gossipPacket)
@@ -225,9 +216,9 @@ func (g *Gossiper) sendToPeer(gossipPacket utils.GossipPacket, targetIpPort stri
 	utils.HandleError(e)
 }
 
+// Broadcast packet to neighbors (except the one the packet was received from)
 func (g *Gossiper) broadcastMessage(packet utils.GossipPacket, receivedFrom string) {
 	var wg sync.WaitGroup
-	// Broadcast to everyone except originPeer
 	for _, p := range g.Peers {
 		if p != receivedFrom {
 			wg.Add(1)
@@ -240,6 +231,7 @@ func (g *Gossiper) broadcastMessage(packet utils.GossipPacket, receivedFrom stri
 	wg.Wait()
 }
 
+// Add peer to known neighbors
 func (g *Gossiper) addPeerToListIfApplicable(adr string) {
 	if adr == "" {
 		return
@@ -256,10 +248,12 @@ func (g *Gossiper) addPeerToListIfApplicable(adr string) {
 	}
 }
 
+// Returns all peers
 func (g *Gossiper) GetAllPeers() string {
 	return strings.Join(g.Peers, "\n")
 }
 
+// Updates the routing table
 func (g *Gossiper) updateNextHop(origin string, id uint32, sender string) {
 	if id > g.getNextHop(origin).HighestID || g.getNextHop(origin).HighestID == 0 {
 		g.setNextHop(origin, utils.HopInfo{Address: sender, HighestID: id})

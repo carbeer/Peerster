@@ -8,6 +8,7 @@ import (
 	"github.com/carbeer/Peerster/utils"
 )
 
+// Handles StatusPacket messages
 func (g *Gossiper) statusMessageHandler(status utils.StatusPacket, sender string) {
 
 	fmt.Printf("STATUS from %s%s\n", sender, status.ToString())
@@ -25,7 +26,8 @@ func (g *Gossiper) statusMessageHandler(status utils.StatusPacket, sender string
 	}
 }
 
-// returns true if status is equal, else false
+// Compares two StatusPackets and if applicable, fetches messages from the peer.
+// Returns true if status is equal, else false
 func (g *Gossiper) compareStatus(peer string, status utils.StatusPacket) bool {
 	// Send out additional messages that were requested
 	if new, newMsg := g.AdditionalMessages(status); new {
@@ -74,6 +76,7 @@ Loop:
 	return false, utils.RumorMessage{}
 }
 
+// Generate a StatusPacket from gossiper state
 func (g *Gossiper) generateStatusPacket() utils.StatusPacket {
 	packet := utils.StatusPacket{}
 	g.receivedMessagesLock.RLock()
@@ -85,6 +88,7 @@ func (g *Gossiper) generateStatusPacket() utils.StatusPacket {
 	return packet
 }
 
+// Send acknowledgement of a message to peer adr
 func (g *Gossiper) sendAcknowledgement(adr string) {
 	// Don't send ack to self
 	if adr == g.Address.String() {

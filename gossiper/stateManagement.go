@@ -10,6 +10,7 @@ import (
 	"github.com/carbeer/Peerster/utils"
 )
 
+// Export the gossiper state and store it as json file
 func (g *Gossiper) SaveState() {
 	obj, e := json.MarshalIndent(g, "", "\t")
 	utils.HandleError(e)
@@ -19,6 +20,8 @@ func (g *Gossiper) SaveState() {
 	utils.HandleError(e)
 }
 
+// Loads a gossiper state from a json file
+// NOT WORKING PROPERLY
 func LoadState(id string) *Gossiper {
 	g := Gossiper{}
 	cwd, _ := os.Getwd()
@@ -29,6 +32,7 @@ func LoadState(id string) *Gossiper {
 	return &g
 }
 
+// Exports the private file state as JSON
 func (g *Gossiper) ExportPrivateFiles() string {
 	obj, e := json.MarshalIndent(g.PrivFiles, "", "\t")
 	utils.HandleError(e)
@@ -36,6 +40,7 @@ func (g *Gossiper) ExportPrivateFiles() string {
 	return string(obj)
 }
 
+// Loads the private file state. Name specifies the file name from which the state shall be retrieved.
 func (g *Gossiper) LoadPrivateFiles(name string) {
 	data, e := ioutil.ReadFile(filepath.Join(".", utils.SHARED_FOLDER, name))
 	utils.HandleError(e)

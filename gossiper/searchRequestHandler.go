@@ -10,6 +10,7 @@ import (
 	"github.com/carbeer/Peerster/utils"
 )
 
+// Creates SearchRequest as per client request
 func (g *Gossiper) newSearchRequest(msg utils.Message) {
 	var searchRequest utils.SearchRequest
 	var timeout <-chan time.Time
@@ -44,8 +45,8 @@ Loop:
 			g.searchRequestHandler(searchRequest, true)
 			timeout = time.After(utils.SEARCH_REQUEST_TIMEOUT)
 		case new := <-g.getSearchRequestChannel(searchRequest):
+			// Update number of successful search requests
 			fulfilled += new
-			// Process message
 			if fulfilled >= utils.MIN_THRESHOLD {
 				fmt.Printf("SEARCH FINISHED\n")
 				break Loop
@@ -55,7 +56,8 @@ Loop:
 	g.deleteSearchRequestChannel(searchRequest)
 }
 
-// resend is used to indicate that the current process already searched for available files
+// Handles incoming SearchRequests
+// Resend is used to indicate that the current process already searched for available files
 func (g *Gossiper) searchRequestHandler(msg utils.SearchRequest, resend bool) {
 
 	if g.isCachedSearchRequest(msg) {
@@ -65,6 +67,7 @@ func (g *Gossiper) searchRequestHandler(msg utils.SearchRequest, resend bool) {
 	msg.Budget--
 
 	if !resend {
+		// Get local matches
 		g.searchReplyHandler(g.searchForOwnedFiles(msg))
 	}
 
@@ -92,6 +95,7 @@ func (g *Gossiper) searchRequestHandler(msg utils.SearchRequest, resend bool) {
 	}
 }
 
+// Retrieve matching local files as SearchReply
 func (g *Gossiper) searchForOwnedFiles(msg utils.SearchRequest) utils.SearchReply {
 	results := []*utils.SearchResult{}
 
@@ -111,6 +115,7 @@ func (g *Gossiper) searchForOwnedFiles(msg utils.SearchRequest) utils.SearchRepl
 	return utils.SearchReply{Origin: g.Name, Destination: msg.Origin, HopLimit: utils.HOPLIMIT_CONSTANT, Results: results}
 }
 
+// Returns all available chunks for a specific File
 func (g *Gossiper) getAvailableChunks(file utils.File) ([]uint64, uint64) {
 	var chunkMap []uint64
 	metaFile := g.getStoredChunk(utils.StringHash(file.MetafileHash))
@@ -123,6 +128,7 @@ func (g *Gossiper) getAvailableChunks(file utils.File) ([]uint64, uint64) {
 	return chunkMap, uint64(i)
 }
 
+// Get files that were found for the specified keywords
 func (g *Gossiper) getAvailableFileResults(keywords []string) []utils.FileSkeleton {
 	results := []utils.FileSkeleton{}
 	g.chronReceivedFilesLock.Lock()

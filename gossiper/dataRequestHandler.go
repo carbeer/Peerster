@@ -8,6 +8,7 @@ import (
 	"github.com/carbeer/Peerster/utils"
 )
 
+// Download a file as per client request
 func (g *Gossiper) DownloadFile(msg utils.Message) error {
 	var err error
 	g.fileDownloadChannel[msg.Request] = make(chan bool, 1024)
@@ -30,6 +31,7 @@ func (g *Gossiper) DownloadFile(msg utils.Message) error {
 	return err
 }
 
+// Send out new DataRequest message
 func (g *Gossiper) sendDataRequest(msg utils.Message, destination string) {
 	var dataRequest utils.DataRequest
 	hash := utils.ByteMetaHash(msg.Request)
@@ -46,6 +48,7 @@ func (g *Gossiper) sendDataRequest(msg utils.Message, destination string) {
 	val := msg.Destination != ""
 	g.setDataRequestChannel(msg.Request, response, val)
 
+	// Repeat request if the peer doesn't respond
 	for {
 		g.sendToPeer(gossipMessage, g.getNextHop(destination).Address)
 		select {
@@ -58,6 +61,7 @@ func (g *Gossiper) sendDataRequest(msg utils.Message, destination string) {
 	}
 }
 
+// Handles DataRequest messages
 func (g *Gossiper) dataRequestHandler(msg utils.DataRequest, sender string) {
 	if msg.Destination == g.Name {
 		g.newDataReplyMessage(msg, sender)

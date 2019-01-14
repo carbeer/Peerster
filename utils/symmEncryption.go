@@ -13,6 +13,7 @@ import (
 	"time"
 )
 
+// AES encrypt data byte slice using symmetric key
 func AESEncrypt(data []byte, key []byte) []byte {
 	block, e := aes.NewCipher(key)
 	HandleError(e)
@@ -25,6 +26,7 @@ func AESEncrypt(data []byte, key []byte) []byte {
 	return ciphertext
 }
 
+// AES decrypt data byte slie using symmetric key
 func AESDecrypt(data []byte, key []byte) []byte {
 	block, e := aes.NewCipher(key)
 	HandleError(e)
@@ -37,7 +39,8 @@ func AESDecrypt(data []byte, key []byte) []byte {
 	return plaintext
 }
 
-func DecryptFile(r Replica, name string) {
+// AES decrypt a locally stored file using the key from Replica r
+func AESDecryptFile(r Replica, name string) {
 	<-time.After(time.Second) // Wait for deferred file closing
 	file, e := os.Open(filepath.Join(".", DOWNLOAD_FOLDER, name))
 	HandleError(e)
@@ -56,7 +59,6 @@ func DecryptFile(r Replica, name string) {
 		_, e = file_dec.Write(bytes.Trim(chunk, "\x00"))
 		HandleError(e)
 	}
-
 	file.Close()
 	fmt.Printf("DECRYPTED file %s\n", name)
 }

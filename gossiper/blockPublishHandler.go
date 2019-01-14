@@ -6,6 +6,7 @@ import (
 	"github.com/carbeer/Peerster/utils"
 )
 
+// Handles incoming BlockPublish messages
 func (g *Gossiper) blockPublishHandler(msg utils.BlockPublish, sender string) {
 	g.chainLock.Lock()
 	defer g.chainLock.Unlock()
@@ -23,6 +24,7 @@ func (g *Gossiper) blockPublishHandler(msg utils.BlockPublish, sender string) {
 		fmt.Printf("Dropping block %s as its hash is corrupted: %+v\n", utils.FixedStringHash(msg.Block.Hash()), msg.Block)
 		return
 	}
+
 	if !g.ValidateHistory(msg.Block, true) {
 		fmt.Printf("Dropping block %s as its history is corrupted: %+v\n", utils.FixedStringHash(msg.Block.Hash()), msg.Block)
 		return
@@ -32,6 +34,8 @@ func (g *Gossiper) blockPublishHandler(msg utils.BlockPublish, sender string) {
 	if msg.HopLimit > 0 {
 		g.broadcastMessage(utils.GossipPacket{BlockPublish: &msg}, sender)
 	}
+
+	// Update variable indicating whether this is the first received block
 	if !g.ReceivedBlock && sender != g.Name {
 		g.ReceivedBlock = true
 	}

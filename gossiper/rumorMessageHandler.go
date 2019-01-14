@@ -10,6 +10,7 @@ import (
 	"github.com/carbeer/Peerster/utils"
 )
 
+// Send out new RumorMessage as per client request
 func (g *Gossiper) newRumorMongeringMessage(msg utils.Message) {
 	rumorMessage := utils.RumorMessage{Origin: g.Name, ID: g.IdCounter, Text: msg.Text}
 	fmt.Printf("New rumor mongering message %+v\n", rumorMessage)
@@ -18,7 +19,9 @@ func (g *Gossiper) newRumorMongeringMessage(msg utils.Message) {
 	g.startRumorMongering(rumorMessage)
 }
 
+// Handles incoming RumorMessages
 func (g *Gossiper) rumorMessageHandler(msg utils.RumorMessage, sender string) {
+	// Check if its only a Route Rumor
 	if msg.Text != "" {
 		fmt.Printf("RUMOR origin %s from %s ID %d contents %s\n", msg.Origin, sender, msg.ID, msg.Text)
 		fmt.Printf("PEERS %v\n", fmt.Sprint(strings.Join(g.Peers, ",")))
@@ -28,9 +31,9 @@ func (g *Gossiper) rumorMessageHandler(msg utils.RumorMessage, sender string) {
 	origin := msg.Origin
 	var wg sync.WaitGroup
 
-	// Check whether the message is desired
 	if origin != g.Name {
 		g.updateNextHop(msg.Origin, msg.ID, sender)
+		// Check whether the message is desired
 		if len(g.getReceivedMessages(origin))+1 == int(msg.ID) {
 			g.appendReceivedMessages(msg.Origin, msg)
 
@@ -45,6 +48,7 @@ func (g *Gossiper) rumorMessageHandler(msg utils.RumorMessage, sender string) {
 	wg.Wait()
 }
 
+// Pick random neighbor for mongering that is not `origin` and not already in a rumor mongering with the gossiper
 func (g *Gossiper) pickRandomPeerForMongering(origin string) string {
 	peer := ""
 	for {
@@ -57,6 +61,7 @@ func (g *Gossiper) pickRandomPeerForMongering(origin string) string {
 	return peer
 }
 
+// Kicks of a rumor mongering connection and keeps track of closes bilateral connections
 func (g *Gossiper) startRumorMongering(msg utils.RumorMessage) {
 	gossipPacket := utils.GossipPacket{Rumor: &msg}
 	peer := g.pickRandomPeerForMongering("")
@@ -64,7 +69,7 @@ func (g *Gossiper) startRumorMongering(msg utils.RumorMessage) {
 		if peer == "" {
 			break
 		}
-		// If it return true, coinflip decided to continue mongering, else it stops
+		// If it returns true, coinflip decided to continue mongering, else it stops
 		if !g.startRumorMongeringConnection(peer, gossipPacket) {
 			fmt.Println("Stopping rumormongering")
 			break
@@ -74,6 +79,7 @@ func (g *Gossiper) startRumorMongering(msg utils.RumorMessage) {
 	}
 }
 
+// Represents a bilateral rumor mongering connnection. Once its sended, the method returns a coin flip value
 func (g *Gossiper) startRumorMongeringConnection(peer string, gossipPacket utils.GossipPacket) bool {
 	// Create a channel that is added to the list of owned rumorMongergings
 	g.setRumorMongeringChannel(peer, make(chan utils.StatusPacket, utils.MSG_BUFFER))

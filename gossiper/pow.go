@@ -7,6 +7,7 @@ import (
 	"github.com/carbeer/Peerster/utils"
 )
 
+// Miner, continuously trying to mine new blocks satisfying PoW
 func (g *Gossiper) MineBlocks() {
 	fmt.Println("Starting to mine")
 	var block utils.Block
@@ -30,8 +31,10 @@ Loop:
 			block = utils.Block{Transactions: g.getPendingTransactions(), PrevHash: LastBlock.Hash(), Nonce: utils.GetRandomNonce()}
 		}
 
+		// Search for new hash fulfilling the PoW condition
 		for !utils.ValidateBlockHash(block) {
 			select {
+			// Update block used for hashing since changes have been made
 			case <-g.miner:
 				continue Loop
 			default:
@@ -40,24 +43,26 @@ Loop:
 		}
 		fmt.Printf("FOUND-BLOCK %s\n", utils.FixedStringHash(block.Hash()))
 
-		// Sleep twice the mining time
 		if firstMinedBlock {
 			sleepingTime = 5 * time.Second
 		} else {
 			sleepingTime = 2 * time.Since(startTime)
 		}
 		go g.proposeBlock(utils.BlockPublish{Block: block, HopLimit: utils.BLOCK_PUBLISH_HOP_LIMIT}, sleepingTime)
+		// Update local version of the blockchain
 		g.updateBlockChain(block, false)
 		firstMinedBlock = false
 	}
 }
 
+// Broadcast new block after sleeping the specified duration
 func (g *Gossiper) proposeBlock(msg utils.BlockPublish, sleep time.Duration) {
 	fmt.Printf("Sleeping %f seconds before broadcasting new block.\n", sleep.Seconds())
 	<-time.After(sleep)
 	g.broadcastMessage(utils.GossipPacket{BlockPublish: &msg}, "")
 }
 
+// Update local verison of the blockchain and possibly revert transactions and add them to the Transaction pool
 func (g *Gossiper) updateBlockChain(key utils.Block, locked bool) {
 	if !locked {
 		g.chainLock.Lock()
@@ -65,6 +70,7 @@ func (g *Gossiper) updateBlockChain(key utils.Block, locked bool) {
 	}
 	prevBlock := g.BlockHistory[key.PrevHash]
 
+	// Block is already known
 	if g.BlockHistory[key.Hash()].Counter != 0 {
 		return
 	}
@@ -81,7 +87,7 @@ func (g *Gossiper) updateBlockChain(key utils.Block, locked bool) {
 	}
 
 	g.LastBlock = utils.BlockWrapper{Block: key, Counter: prevBlock.Counter + 1}
-	// notify miner
+	// Notify miner about updates in the chain
 	g.miner <- true
 	g.printChain()
 
@@ -155,13 +161,14 @@ Loop:
 	g.PendingTransactions = newPending
 }
 
+// Ensure that block doesn't include files that are already contained in the history
 func (g *Gossiper) ValidateHistory(block utils.Block, locked bool) bool {
 	if !locked {
 		g.chainLock.Lock()
 		defer g.chainLock.Unlock()
 	}
 
-	// Check whether the transactions within the block are unique within the chain
+	// Iterate through all blocks and transactions
 	for _, v := range block.Transactions {
 		currentBlock := g.BlockHistory[block.PrevHash].Block
 		for {
@@ -171,6 +178,7 @@ func (g *Gossiper) ValidateHistory(block utils.Block, locked bool) bool {
 					return false
 				}
 			}
+			// Beginning of the chain reached
 			if currentBlock.PrevHash == [32]byte{0} {
 				break
 			}
@@ -180,6 +188,7 @@ func (g *Gossiper) ValidateHistory(block utils.Block, locked bool) bool {
 	return true
 }
 
+// Print chain according to homework specifications
 func (g *Gossiper) printChain() {
 	currBlock := g.LastBlock.Block
 	toPrint := "CHAIN"

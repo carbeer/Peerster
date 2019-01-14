@@ -95,36 +95,36 @@ func (g *Gossiper) peerMessageHandler(msg utils.GossipPacket, sender string) {
 		g.simpleMessageHandler(*msg.Simple)
 	} else if msg.Rumor != nil {
 		if msg.Rumor.Text == "" {
-			fmt.Printf("%s: Got route rumor message from %s \n", g.Name, sender)
+			fmt.Printf("Got route rumor message from %s \n", sender)
 		} else {
-			fmt.Printf("%s: Got rumor message from %s \n", g.Name, sender)
+			fmt.Printf("Got rumor message from %s \n", sender)
 		}
 		g.rumorMessageHandler(*msg.Rumor, sender)
 	} else if msg.Status != nil {
 		g.statusMessageHandler(*msg.Status, sender)
 	} else if msg.Private != nil {
-		fmt.Printf("%s: Got private message from %s \n", g.Name, sender)
+		fmt.Printf("Got private message from %s \n", sender)
 		g.privateMessageHandler(*msg.Private)
 	} else if msg.DataRequest != nil {
-		fmt.Printf("%s: Got data request from %s \n", g.Name, sender)
+		fmt.Printf("Got data request from %s \n", sender)
 		g.dataRequestHandler(*msg.DataRequest, sender)
 	} else if msg.DataReply != nil {
-		fmt.Printf("%s: Got data reply from %s \n", g.Name, sender)
+		fmt.Printf("Got data reply from %s \n", sender)
 		g.dataReplyHandler(*msg.DataReply)
 	} else if msg.SearchReply != nil {
-		fmt.Printf("%s: Got search reply from %s\n", g.Name, sender)
+		fmt.Printf("Got search reply from %s\n", sender)
 		g.searchReplyHandler(*msg.SearchReply)
 	} else if msg.SearchRequest != nil {
-		fmt.Printf("%s: Got search request from %s \n", g.Name, sender)
+		fmt.Printf("Got search request from %s \n", sender)
 		g.searchRequestHandler(*msg.SearchRequest, false)
 	} else if msg.TxPublish != nil {
-		fmt.Printf("%s: Got tx publish from %s \n", g.Name, sender)
+		fmt.Printf("Got tx publish from %s \n", sender)
 		g.txPublishHandler(*msg.TxPublish, sender)
 	} else if msg.BlockPublish != nil {
-		fmt.Printf("%s: Got block publish from %s \n", g.Name, sender)
+		fmt.Printf("Got block publish from %s \n", sender)
 		g.blockPublishHandler(*msg.BlockPublish, sender)
 	} else if msg.FileExchangeRequest != nil {
-		fmt.Printf("%s: Got file exchange request from %s\n", g.Name, sender)
+		fmt.Printf("Got file exchange request from %s\n", sender)
 		g.fileExchangeRequestHandler(*msg.FileExchangeRequest, sender)
 	} else if msg.Challenge != nil {
 		g.challengeHandler(*msg.Challenge, sender)

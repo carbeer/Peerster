@@ -7,6 +7,7 @@ import (
 	"github.com/carbeer/Peerster/utils"
 )
 
+// Handles SimpleMessages
 func (g *Gossiper) simpleMessageHandler(msg utils.SimpleMessage) {
 	fmt.Printf("SIMPLE MESSAGE origin %s from %s contents %s\n", msg.OriginalName, msg.RelayPeerAddr, msg.Contents)
 	fmt.Printf("PEERS %v\n", fmt.Sprint(strings.Join(g.Peers, ",")))

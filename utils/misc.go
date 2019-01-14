@@ -35,6 +35,7 @@ func MinUint64(a uint64, b uint64) uint64 {
 	return a
 }
 
+// Logging of errors
 func HandleError(e error) {
 	if e != nil {
 		log.Println("General error", e)

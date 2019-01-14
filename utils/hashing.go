@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 )
 
+// Generate hash from Block
 func (b *Block) Hash() (out [32]byte) {
 	h := sha256.New()
 	h.Write(b.PrevHash[:])
@@ -19,6 +20,7 @@ func (b *Block) Hash() (out [32]byte) {
 	return
 }
 
+// Generate hash from TxPublish
 func (t *TxPublish) Hash() (out [32]byte) {
 	h := sha256.New()
 	binary.Write(h, binary.LittleEndian, uint32(len(t.File.Name)))
@@ -28,6 +30,7 @@ func (t *TxPublish) Hash() (out [32]byte) {
 	return
 }
 
+// Checks whether blockhahs has enough leading zeroes for PoW
 func ValidateBlockHash(block Block) bool {
 	hash := block.Hash()
 	for ix := 0; ix < LEADING_ZEROES; ix++ {
@@ -38,12 +41,14 @@ func ValidateBlockHash(block Block) bool {
 	return true
 }
 
+// Convert hex string to byte slice
 func ByteMetaHash(hash string) []byte {
 	res, e := hex.DecodeString(hash)
 	HandleError(e)
 	return res
 }
 
+// Convert hex string to byte array
 func FixedByteHash(hash string) (arr [32]byte) {
 	b := make([]byte, 32)
 	b = ByteMetaHash(hash)
@@ -51,10 +56,12 @@ func FixedByteHash(hash string) (arr [32]byte) {
 	return
 }
 
+// Convert byte hash to hex string (slice)
 func StringHash(hash []byte) string {
 	return hex.EncodeToString(hash)
 }
 
+// Convert byte hash to hex string (array)
 func FixedStringHash(hash [32]byte) string {
 	return StringHash(hash[:])
 }

@@ -7,6 +7,33 @@ import (
 	"time"
 )
 
+type GossipPacket struct {
+	Simple              *SimpleMessage
+	Rumor               *RumorMessage
+	Status              *StatusPacket
+	Private             *PrivateMessage
+	DataRequest         *DataRequest
+	DataReply           *DataReply
+	SearchRequest       *SearchRequest
+	SearchReply         *SearchReply
+	TxPublish           *TxPublish
+	BlockPublish        *BlockPublish
+	FileExchangeRequest *FileExchangeRequest
+	Challenge           *Challenge
+}
+
+type Message struct {
+	Text         string   `json:"text"`
+	Destination  string   `json:"destination"`
+	FileName     string   `json:"filename"`
+	Request      string   `json:"request"`
+	Keywords     []string `json:"keywords"`
+	Budget       int64    `json:"budget"`
+	Peer         string   `json:"peer"`
+	Encrypted    bool     `json:"encrypted"`
+	Replications int      `json:"replications"`
+}
+
 type SimpleMessage struct {
 	OriginalName  string
 	RelayPeerAddr string
@@ -26,7 +53,7 @@ type PrivateMessage struct {
 	EncryptedText string
 	Destination   string
 	HopLimit      uint32
-	Signature     []byte `json:"-"`
+	Signature     []byte `json:"-"` // Needs to be excluded due to the signing algorithm
 }
 
 type DataRequest struct {
@@ -42,18 +69,6 @@ type DataReply struct {
 	HopLimit    uint32
 	HashValue   []byte
 	Data        []byte
-}
-
-type Message struct {
-	Text         string   `json:"text"`
-	Destination  string   `json:"destination"`
-	FileName     string   `json:"filename"`
-	Request      string   `json:"request"`
-	Keywords     []string `json:"keywords"`
-	Budget       int64    `json:"budget"`
-	Peer         string   `json:"peer"`
-	Encrypted    bool     `json:"encrypted"`
-	Replications int      `json:"replications"`
 }
 
 type TxPublish struct {
@@ -78,13 +93,20 @@ type BlockWrapper struct {
 }
 
 type PeerStatus struct {
-	// Equals the Origin in RumorMessage
-	Identifier string
+	Identifier string // Equals the Origin in RumorMessage
 	NextID     uint32
 }
 
 type StatusPacket struct {
 	Want []PeerStatus
+}
+
+func (sp *StatusPacket) ToString() string {
+	s := ""
+	for status := range sp.Want {
+		s = fmt.Sprintf("%s peer %s nextID %v", s, sp.Want[status].Identifier, sp.Want[status].NextID)
+	}
+	return s
 }
 
 type SearchRequest struct {
@@ -95,10 +117,6 @@ type SearchRequest struct {
 
 func (s *SearchRequest) GetIdentifier() string {
 	return fmt.Sprintf("%s:%s", s.Origin, s.Keywords)
-}
-
-func (s *SearchRequest) GetLocalIdentifier() string {
-	return fmt.Sprintf("%d:%s", s.Budget, s.Keywords)
 }
 
 func (s *SearchRequest) GetKeywordIdentifier() string {
@@ -119,14 +137,6 @@ type SearchResult struct {
 	ChunkCount   uint64
 }
 
-func (sp *StatusPacket) ToString() string {
-	s := ""
-	for status := range sp.Want {
-		s = fmt.Sprintf("%s peer %s nextID %v", s, sp.Want[status].Identifier, sp.Want[status].NextID)
-	}
-	return s
-}
-
 type File struct {
 	Name         string
 	Size         int64
@@ -139,29 +149,28 @@ type PrivateFile struct {
 }
 
 type Replica struct {
-	NodeID        string
-	EncryptionKey []byte
-	// Exchange Metafilehash
-	ExchangeMFH  string
-	Metafilehash string
+	NodeID        string // Name of the remote peer storing the file
+	EncryptionKey []byte // AES Encryption key
+	ExchangeMFH   string // Exchange Metafilehash
+	Metafilehash  string // Metafilehash of the encrypted file
 }
 
 type FileExchangeRequest struct {
 	Origin               string
-	Destination          string // Empty for OFFER
+	Destination          string // Empty for OFFER, i.e. the initial broadcast
 	Status               string // OFFER, ACCEPT, FIX
 	HopLimit             uint32
-	MetaFileHash         string
-	ExchangeMetaFileHash string
+	MetaFileHash         string // hex-representation of the Metafilehash of the Replica
+	ExchangeMetaFileHash string // Empty for OFFER, i.e. the initial broadcast
 }
 
 type Challenge struct {
 	Origin       string
 	Destination  string
 	MetaFileHash string
-	ChunkHash    string
-	Postpend     []byte
-	Solution     []byte
+	ChunkHash    string // Targeted chunk
+	Postpend     []byte // Data to be used for PoR
+	Solution     []byte // Empty for request
 	HopLimit     uint32
 }
 
@@ -194,21 +203,6 @@ type ChunkInfo struct {
 type HopInfo struct {
 	Address   string
 	HighestID uint32
-}
-
-type GossipPacket struct {
-	Simple              *SimpleMessage
-	Rumor               *RumorMessage
-	Status              *StatusPacket
-	Private             *PrivateMessage
-	DataRequest         *DataRequest
-	DataReply           *DataReply
-	SearchRequest       *SearchRequest
-	SearchReply         *SearchReply
-	TxPublish           *TxPublish
-	BlockPublish        *BlockPublish
-	FileExchangeRequest *FileExchangeRequest
-	Challenge           *Challenge
 }
 
 type StoredMessage struct {

@@ -11,6 +11,7 @@ import (
 	"github.com/carbeer/Peerster/utils"
 )
 
+// Sends out a new data reply message
 func (g *Gossiper) newDataReplyMessage(msg utils.DataRequest, sender string) {
 	dataReplyMessage := utils.DataReply{Origin: g.Name, Destination: msg.Origin, HopLimit: utils.HOPLIMIT_CONSTANT, HashValue: msg.HashValue, Data: g.getStoredChunk(hex.EncodeToString(msg.HashValue))}
 	gossipMessage := utils.GossipPacket{DataReply: &dataReplyMessage}
@@ -25,6 +26,7 @@ func (g *Gossiper) newDataReplyMessage(msg utils.DataRequest, sender string) {
 	}
 }
 
+// Handles DataReply messages
 func (g *Gossiper) dataReplyHandler(msg utils.DataReply) {
 	if msg.Destination == g.Name {
 		g.receiveDataReply(msg)
@@ -38,6 +40,7 @@ func (g *Gossiper) dataReplyHandler(msg utils.DataReply) {
 	}
 }
 
+// Handles incoming DataReplies
 func (g *Gossiper) receiveDataReply(msg utils.DataReply) {
 	stringHashValue := hex.EncodeToString(msg.HashValue)
 	reqChunk := g.getRequestedChunks(stringHashValue)
@@ -46,7 +49,7 @@ func (g *Gossiper) receiveDataReply(msg utils.DataReply) {
 		fmt.Printf("CHUNK %s was not requested\n", stringHashValue)
 		return
 	}
-	// Corrupted data
+
 	if !CheckDataValidity(msg.Data, msg.HashValue) {
 		if string(msg.Data) == "" {
 			fmt.Printf("DATA FIELD WAS EMPTY - It seems like the peer doesn't have the requested file. Dropping requests.\n")
@@ -55,8 +58,10 @@ func (g *Gossiper) receiveDataReply(msg utils.DataReply) {
 		return
 	}
 
+	// Notify process
 	g.sendToDataRequestChannel(stringHashValue, true)
 	g.addStoredChunk(stringHashValue, msg.Data)
+	// Metafile chunk
 	if reqChunk.ChunkNr == 0 {
 		fmt.Printf("DOWNLOADING metafile of %s from %s\n", reqChunk.FileName, msg.Origin)
 		g.onMetaFileReception(msg.Data, msg.HashValue)
@@ -64,11 +69,14 @@ func (g *Gossiper) receiveDataReply(msg utils.DataReply) {
 	} else {
 		fmt.Printf("DOWNLOADING %s chunk %d from %s\n", reqChunk.FileName, reqChunk.ChunkNr, msg.Origin)
 	}
+	// Last chunk of the file
 	if reqChunk.NextHash == "" && reqChunk.ChunkNr != 0 {
 		g.popRequestedChunks(stringHashValue)
 		g.reconstructFile(reqChunk.MetaHash)
 		return
 	}
+
+	// Chek whether file is supposed to be from one peer or the entire network
 	destAvailable := g.getDestinationSpecified(stringHashValue)
 	if !destAvailable {
 		g.sendDataRequest(utils.Message{Request: g.popRequestedChunks(stringHashValue).NextHash}, g.getChunkHolder(reqChunk.MetaHash, (reqChunk.ChunkNr+1)))
@@ -77,6 +85,7 @@ func (g *Gossiper) receiveDataReply(msg utils.DataReply) {
 	}
 }
 
+// Reads out all the required chunk hashes from the metafile
 func (g *Gossiper) onMetaFileReception(metaFile []byte, hashValue []byte) {
 	file := g.getStoredFile(utils.StringHash(hashValue))
 	prevChunk := utils.StringHash(hashValue)
@@ -96,6 +105,7 @@ func (g *Gossiper) onMetaFileReception(metaFile []byte, hashValue []byte) {
 	g.addRequestedChunks(prevChunk, utils.ChunkInfo{ChunkNr: counter, MetaHash: utils.StringHash(hashValue), FileName: file.Name})
 }
 
+// Reconstructs file from all available chunks
 func (g *Gossiper) reconstructFile(metaHash string) {
 	_ = os.Mkdir(fmt.Sprintf(".%s%s", string(os.PathSeparator), utils.DOWNLOAD_FOLDER), os.ModePerm)
 	file, e := os.Create(filepath.Join(".", utils.DOWNLOAD_FOLDER, g.getStoredFile(metaHash).Name))
@@ -103,6 +113,7 @@ func (g *Gossiper) reconstructFile(metaHash string) {
 	defer file.Close()
 	metaFile := g.getStoredChunk(metaHash)
 	counter := 0
+	// Loop through all chunk hashes in the metafile
 	for {
 		temp := utils.GetHashAtIndex(metaFile, counter)
 		if temp == nil {
@@ -118,9 +129,11 @@ func (g *Gossiper) reconstructFile(metaHash string) {
 	g.setStoredFile(metaHash, storedFile)
 
 	fmt.Printf("RECONSTRUCTED file %s\n", storedFile.Name)
+	// Notfies channel of successful download
 	g.fileDownloadChannel[metaHash] <- true
 }
 
+// Check whether the hash and the data align with each other
 func CheckDataValidity(data []byte, hash []byte) bool {
 	var hashFunc = crypto.SHA256.New()
 	hashFunc.Write(data)

@@ -6,6 +6,7 @@ import (
 	"github.com/carbeer/Peerster/utils"
 )
 
+// Handles TxPublish messages
 func (g *Gossiper) txPublishHandler(msg utils.TxPublish, sender string) {
 	if !g.inBlockHistory(msg) && !g.inPendingTransactions(msg) {
 		g.addPendingTransaction(msg)

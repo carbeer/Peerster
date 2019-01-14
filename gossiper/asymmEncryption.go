@@ -11,6 +11,7 @@ import (
 	"github.com/carbeer/Peerster/utils"
 )
 
+// Encrypt text data using the hex-encoded public key `target` of the recipient
 func RSAEncryptText(target string, text string) string {
 	textBytes := []byte(text)
 	hash := utils.HASH_ALGO.New()
@@ -33,6 +34,7 @@ func RSAEncryptText(target string, text string) string {
 	return ctext
 }
 
+// Decrypt text using the private key
 func (g *Gossiper) RSADecryptText(ctext string) string {
 	hash := utils.HASH_ALGO.New()
 	textBytes := []byte(ctext)
@@ -48,6 +50,7 @@ func (g *Gossiper) RSADecryptText(ctext string) string {
 	return text
 }
 
+// Sign private message content
 func (g *Gossiper) RSASignPM(msg utils.PrivateMessage) utils.PrivateMessage {
 	hash := utils.HASH_ALGO.New()
 
@@ -62,6 +65,7 @@ func (g *Gossiper) RSASignPM(msg utils.PrivateMessage) utils.PrivateMessage {
 	return msg
 }
 
+// Verify signature of a private message
 func (g *Gossiper) RSAVerifyPMSignature(msg utils.PrivateMessage) bool {
 	hash := utils.HASH_ALGO.New()
 

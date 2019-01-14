@@ -8,6 +8,8 @@ import (
 	"github.com/carbeer/Peerster/utils"
 )
 
+// Downloads a private file, if possible returning the locally stored file,
+// otherwise by fetching one of the remote replications.
 func (g *Gossiper) DownloadPrivateFile(msg utils.Message) error {
 	f := g.getPrivateFile(msg.Request)
 	name := msg.FileName
@@ -23,6 +25,7 @@ func (g *Gossiper) DownloadPrivateFile(msg utils.Message) error {
 	}
 }
 
+// Retrieve replica from peer
 func (g *Gossiper) downloadReplica(r utils.Replica, name string) error {
 	var err error
 	m := utils.Message{FileName: name, Request: r.Metafilehash, Destination: r.NodeID}
@@ -34,11 +37,11 @@ func (g *Gossiper) downloadReplica(r utils.Replica, name string) error {
 		err = errors.New("Timeout, couldn't download file")
 		break
 	case <-g.fileDownloadChannel[r.Metafilehash]:
-		utils.DecryptFile(r, name)
+		utils.AESDecryptFile(r, name)
 	}
 	delete(g.fileDownloadChannel, r.Metafilehash)
 	if err == nil {
-		log.Println("Succesfully downloaded the file", name)
+		log.Printf("Succesfully downloaded the file %s, you can find the decrypted file as decrypted_%s\n ", name, name)
 	}
 	return err
 }

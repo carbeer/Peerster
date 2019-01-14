@@ -175,17 +175,15 @@ func (g *Gossiper) holdsFile(file utils.PrivateFile, peer string) bool {
 	return false
 }
 
+// Assigning the Replica to a peer
+// Throws an error if the Replica is already assigned to another peer
 func (g *Gossiper) AssignReplica(mfh string, nodeID string, exchangeMFH string) error {
 	g.privFileLock.Lock()
 	defer g.privFileLock.Unlock()
 	if g.Replications[mfh] == nil {
-		fmt.Printf("Replica %s is not existing\n", mfh)
 		return errors.New("Replica is not existing")
 	}
 	if g.Replications[mfh].NodeID != "" || g.Replications[mfh].ExchangeMFH != "" {
-		fmt.Printf("Found: %p\n", g.Replications[mfh])
-		fmt.Printf("Replica %s already assigned: %+v\n", mfh, g.Replications[mfh])
-		g.compare()
 		return errors.New("Replication is already assigned")
 	}
 	fmt.Println("Assigning new parameters for: ", mfh, nodeID, exchangeMFH)
@@ -194,17 +192,7 @@ func (g *Gossiper) AssignReplica(mfh string, nodeID string, exchangeMFH string) 
 	return nil
 }
 
-func (g *Gossiper) compare() {
-	for key, _ := range g.PrivFiles {
-		fmt.Printf("%+v\n", g.PrivFiles[key])
-		for i, v := range g.PrivFiles[key].Replications {
-			// if g.Replications[v.Metafilehash] != &g.PrivFiles[key].Replications[i] {
-			fmt.Printf("%p vs %p for key %s and %s\n", g.Replications[v.Metafilehash], &g.PrivFiles[key].Replications[i], v.Metafilehash, key)
-			// }
-		}
-	}
-}
-
+// Removing references to peer, thereby allowing the Replica to be reassigned
 func (g *Gossiper) freeReplica(mfh string) {
 	g.privFileLock.Lock()
 	g.Replications[mfh].NodeID = ""
@@ -250,7 +238,6 @@ func (g *Gossiper) getDataRequestChannel(key string) chan bool {
 
 func (g *Gossiper) getDestinationSpecified(key string) bool {
 	g.dataRequestChannelLock.RLock()
-	fmt.Printf("Querying destination specified\n")
 	val := g.destinationSpecified[key]
 	g.dataRequestChannelLock.RUnlock()
 	return val
@@ -258,7 +245,6 @@ func (g *Gossiper) getDestinationSpecified(key string) bool {
 
 func (g *Gossiper) setDataRequestChannel(key string, value chan bool, addValue bool) {
 	g.dataRequestChannelLock.Lock()
-	fmt.Printf("Setting data request channel and destination specified with arguments: %s, %t\n", key, addValue)
 	g.dataRequestChannel[key] = value
 	g.destinationSpecified[key] = addValue
 	g.dataRequestChannelLock.Unlock()
@@ -266,7 +252,6 @@ func (g *Gossiper) setDataRequestChannel(key string, value chan bool, addValue b
 
 func (g *Gossiper) deleteDataRequestChannel(key string) {
 	g.dataRequestChannelLock.Lock()
-	fmt.Printf("Deleting data request channel\n")
 	delete(g.dataRequestChannel, key)
 	g.dataRequestChannelLock.Unlock()
 }
