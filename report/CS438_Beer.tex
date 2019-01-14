@@ -82,39 +82,38 @@ linenos
 \newcommand{\elem}[1]{\noindent\textbf{#1}\,\,}
 \section*{Introduction}
 %(1 paragraph per team) Briefly describe the problem that your project is trying to solve and explain your motivation for selecting this problem, that is explain why it is an important problem to work on. 
-Our Peerster protocol allows us to exchange messages and files in a decentralized network. While we also have the functionality of a private message, the topic of \emph{privacy} has not been a big concern in this implementation. 
-With the presented final project, Peerster shall be extended to allow for the upload of private files with a high availability while preserving incentive compatibility for nodes in the network. Furthermore, the implementation of private messages shall be extended, so that it prevents other nodes from evesdropping on the exchanged content.
+Our Peerster protocol allows us to exchange messages and files in a decentralized network. While we have the functionality of uploading files, the topic of \emph{privacy} has not been a big concern in this implementation since all contents in the network are accessible to everyone.
+With the presented final project, Peerster is  extended to allow for the upload of private files while preserving incentive compatibility for nodes in the network and tolerating temporary node failures without affecting file availability. Furthermore, the private messaging functionality is extended by content encryption and digital signatures to prevent eavesdropping.
 
 \section*{Related work}
 %(~0.5 page per team member) If other people have also tried to solve this problem (which they most probably have), what are the main approaches that they use and what are their drawbacks and limitations? Try to summarize the main idea of their approaches and describe how your approach compares to theirs. For instance, in an anonymity project, you could say systems 1, 2 and 3 use mixnets, while systems 4 and 5 use different network paths. 
 \elem{Cryptography}
-Providing privacy for the contents of files and messages can be achieved utilizing cryptography. In asymmetric cryptography, peers generate a key-pair (pub, priv) of which only the pulic key is made available to other peers. Data that is addressed to a peer can then be encrypted using their public key. Once encrypted, the data can then only be decrypted by the peer posessing the corresponding private key. One asymmetric key encryption algorithm is Rivest–Shamir–Adleman (RSA).
-On the other hand, in symmetric cryptography, a single key is used to en- and decrypt data. Data can thereby be shared among peers by distributing a key, e.g. utilizing asymmetric crpytography, or, in bilateral settings, using Diffie-Hellman key exchange to generate the key upfront. One method of symmetric cryptography are algorithms using block ciphers such as the Advanced Encryption Standard (AES) \citep{Smart.2002}.
+Providing privacy for the contents of files and messages can be achieved utilizing cryptography. In asymmetric cryptography, peers generate a key-pair (pub, priv) of which only the public key is made available to other peers. Data that is addressed to a peer can then be encrypted using this node's public key. Once encrypted, the data can only be decrypted by the peer possessing the corresponding private key. One asymmetric key encryption algorithm is Rivest–Shamir–Adleman (RSA).\\
+On the other hand, in symmetric cryptography, a single key is used to both en- and decrypt data. Data can thereby be shared among peers by distributing the utilized key, e.g. through an asymmetrically encrypted message, or, in bilateral settings, using Diffie-Hellman key exchange to generate a key upfront. One method of symmetric cryptography are algorithms using block ciphers such as the Advanced Encryption Standard (AES) \citep{Smart.2002}.
 \\\vspace{0.5em}
 
 \elem{Availability}
-Availability in p2p networks where nodes cannot be assumed to be reliable can be achieved by \emph{replications} or \emph{erasure coding} \citep{Weatherspoon.2002}. While the approach of replications distributed copies of files or chunks of files among nodes, whereas erasure coding introduces redundancy on the data level and breaks up the data into fragments that are stored accross different nodes. 
+Availability of data in p2p networks where the nodes themselves cannot be assumed to be reliable may be achieved through \emph{replications} or \emph{erasure coding} \citep{Weatherspoon.2002}. While the approach of replications distributes copies of files or chunks of files among nodes, erasure coding introduces redundancy on the data level and breaks up the data into fragments that are stored across different nodes. 
 \\\vspace{0.5em}
 
 \elem{Incentive compatibility in p2p cloud storage}
-When storing Public Files, other peers may have some inherent benefit from storing a file published by another peer, e.g. by having constant access to the data. However, when files are encrypted and made private, this incentive fades. 
+When storing Public Files, other peers may have some inherent advantage from storing a file published by another peer, such as having constant access to the data. However, when files are encrypted and made private, this incentive fades. 
 \\
-\cite{Feldman.2005} examines different incentive mechanisms and finds \emph{Inherent Generosity}, \emph{Monetary Payment Systems} and \emph{Reciprocity-Based Schemes} as main concepts.
+\cite{Feldman.2005} examines different incentive mechanisms and identifies \emph{Inherent Generosity}, \emph{Monetary Payment Systems} and \emph{Reciprocity-Based Schemes} as main concepts.\\
+A concept that relies on inherent generosity is the p2p cloud storage system Freenet \citep{Clarke.2001}. However, this doesn't seem to provide sufficient incentive compatibility as the system suffers from lacking storage capacity \citep{Kopp.2017}.
 \\
-A concepts that relies on inherent generosity is the p2p cloud storage system Freenet \citep{Clarke.2001}. However, this doesn't seem to provide sufficient incentive compatibility as the system suffers from lacking storage capacity \citep{Kopp.2017}.
-\\
-\emph{Monetary incentives} are used in a multitude of different systems. Many of them issue tokens that can be traded on exchanges (e.g. \cite{Vorick.2014}, \cite{Wilkinson.2014} and \cite{Lambert.2015}). Thereby, differences in supply and demand of storage may result in price changes of the coin and, in turn, change supply and demand to a new equilibrium. 
+\emph{Monetary incentives} are used in a multitude of different systems. Many of them issue tokens that can be traded on exchanges (e.g. \cite{Vorick.2014}, \cite{Wilkinson.2014} and \cite{Lambert.2015}). Thereby, differences in supply and demand of storage space may result in price changes of the coin and, in turn, changes of supply and demand resulting in a new equilibrium. 
 \\
 Thirdly, in \emph{Reciprocity-Based Schemes} transaction histories are incorporated into decision processes. Schemes like tit-for-that such as BitTorrent (c.f. \cite{Cohen.2003}) or classic reputation systems are attributed to this class of incentive mechanisms \citep{Feldman.2005}. One approach to act based upon transaction history is for example \emph{stranger discrimination} which discriminates newly joined nodes to avoid Sybil attacks \citep{Lai.2003}.
 \\\vspace{0.5em}
 
 \elem{Proving data posession}
-A basic way of ensuring replication if the so-called Proof-of-Retrievability (PoR). The core idea is to let peers compute values based on the data they are supposed to store. By using a hash instead of downloading the entire file, communication overhead is reduced. To further ensure that a peer does not precompute hashes, the peer may only know the precise task he has to solve at the time he is asked to provide the proof.
+A basic way of ensuring replication if the so-called Proof-of-Retrievability (PoR). The core idea is to let peers compute values based on the data they are supposed to store. By using a hash instead of downloading the entire file, communication overhead is reduced. To further ensure that a peer cannot not precompute hashes, the peer may only know the precise task he has to solve at the time he is asked to provide the proof.
 \\
-To make collusion among peers for the computation of PoRs infeasible, \cite{ProtocolLabs.2017} propose to send out pseudo-random permutations of data, whereas \cite{Vorick.2014} sends out data with different encryption keys. 
-\cite{ProtocolLabs.2017} additionally introduces a Proof-of-Spacetime, which is an iterative PoR that takes the previous proof as input of subsequent proof and thereby aims at proving the continued storage of a file while reducing communication overhead.
+To make collusion among peers for the computation of PoRs infeasible, \cite{ProtocolLabs.2017} propose to send out pseudo-random permutations of data, whereas \cite{Vorick.2014} sends out data that was encrypted using different symmetric keys. 
+\cite{ProtocolLabs.2017} additionally introduce a Proof-of-Spacetime, which is an iterative PoR that takes the previous proof as input of a subsequent proof and thereby aims at proving the continued storage of a file while reducing communication overhead.
 \\
-\cite{Kopp.2017} uses publicly verifiable PoR based on \emph{Homomorphic Linear Authenticator}, as introduced by \cite{Ateniese.2009}. An alternative to this are \emph{Zero Knowledge Proofs} (c.f. \cite{Lambert.2015}).
+\cite{Kopp.2017} uses publicly verifiable PoRs based on \emph{Homomorphic Linear Authenticators} as introduced by \cite{Ateniese.2009}. An alternative to this are \emph{Zero Knowledge Proofs} (c.f. \cite{Lambert.2015}).
 \\
 Combining this with blockchain-based \emph{Smart Contracts} allows to automate the monitoring and verification of PoRs (c.f. \cite{Vorick.2014}). 
 
@@ -122,21 +121,23 @@ Combining this with blockchain-based \emph{Smart Contracts} allows to automate t
 \section*{System Goals \& Functionalities \& Architecture} 
 %(~1 page per team member) State concisely yet concretely the goals of your project are and the functionalities that you envision to implement. For instance, in Peerster, one of the goals is spreading rumor messages and one of the functionalities is that a rumor message sent by a peer spreads through the network in a few seconds. What will be the overall architecture of your system and how are different parts are going to work together? Please draw a diagram and specify which team member is responsible for which part.
 \elem{Goals} 
-The goal of this final project implementation is to enable Private File storage through Peerster. As storing private files of others does not inherently benefit any node that cannot access its contents, other measures have to be taken to nevertheless ensure the distribution of the file across the network, and, thereby, availability of a file in case of temporary node failures. Furthermore, as payment systems additionally complicate the implementation and, if traded on exchanges, are usually subject to high volatility, the presented approach aims at providing incentive compatibility without introducing tokens or coins. 
+The goal of this final project implementation is to enable Private File storage through Peerster. As storing private files of others does not inherently benefit any node that cannot access its contents, other measures have to be taken to ensure the distribution of the file across the network. This way, availability of a file can be preserved in case of temporary node failures. \\
+As payment systems additionally complicate the implementation and, if traded on exchanges, are often subject to high volatility, the presented approach aims at providing incentive compatibility without introducing tokens or coins. 
+\\\vspace{0.5em}
 %* Provide incentive compatibility (without additional payment system) --> Limit scope, but also no volatility 
 %* Provide privacy while allowing to replicate files accross the network
 %* Provide some degree of certainty about replications
 %* Increased retrievability of files
 %* Allow for encrypted private messages
-\\\vspace{0.5em}
+
 
 %\elem{Proof of retrievability and guaranteeing redundancy}
 %Periodically query the storing peer with a challenge to guarantee retrievability. Adapt randomized time intervals based on responses. Encrypt each file replication with another symmetric key to rule out deduplication (c.f. Sia)
 %\\\vspace{0.5em}
 
 \elem{Private file upload}
-To describe private files, we introduce a new struct \texttt{PrivateFile}. Private files are similar to the Files that we have previously used. However, the result of the file indexing process will not be published, i.e. not included in the blockchain and not returned as result of search requests. 
-Besides the \texttt{File} struct that we used in previous homeworks, \texttt{Replica} are used to represent the storage of a file at another peer. Each replica instance represents an AES encrypted version of the original file. For each \texttt{Replica} another \texttt{EncryptionKey} is used, the reason for this will be explained lateron in the paragraph targeting Proof of Retrievability. Right after the indexing of the file, the variables \texttt{NodeID} and \texttt{ExchangeMFH} are empty as the replications are only stored locally at this point. \\\vspace{0.5em}
+To describe private files, we introduce a new struct \texttt{PrivateFile}. Private files are similar to the \texttt{File} struct that we have previously used. However, the result of the file indexing process will not be published for \texttt{PrivateFiles}, i.e. it is not included in the blockchain and not returned as result of search requests. 
+Besides the \texttt{File} struct that we used in previous homeworks, \texttt{Replica} are used to represent the storage of the file at another peer. Each \texttt{Replica} instance represents an AES encrypted version of the original file, each using a different \texttt{EncryptionKey}. Right after the indexing of the file, the variables \texttt{NodeID} and \texttt{ExchangeMFH} are empty as the replications are only stored locally at this point. \\\vspace{0.5em}
 
 \begin{listing}
 \begin{minted}[escapeinside=||]{go}
@@ -152,16 +153,16 @@ type |\textcolor{mblue}{Replica}| struct {
 	Metafilehash    string // Metafilehash of the encrypted file
 }
 \end{minted}
-\caption{Structs modelling private files and their replications}
+\caption{Structs modeling private files and their replications}
 \end{listing}
 
 
 \elem{Distribute replications} 
-To distribute the file among the network, a process resembling a three-way handshake, using \texttt{FileExchangeRequests} is performed for each replica:
+To distribute the file among the network, a process resembling a three-way handshake using \texttt{FileExchangeRequests} is performed for each replica:
 \begin{enumerate}
-	\item The node broadcasts a \texttt{FileExchangeRequest} with the status \texttt{OFFER} to the network. Further variables contain information about the \texttt{MetaFileHash} of the Replica and the name of the node sending the request.
+	\item The node broadcasts a \texttt{FileExchangeRequest} with the status \texttt{OFFER} to the network. Further variables contain information about the \texttt{MetaFileHash} of the \texttt{Replica} and the name of the node sending the request.
 	\item Interested peers respond to that message with another \texttt{FileExchangeMessage} including the metafilehash of the file they would be interested to send in exchange as variable \texttt{ExchangeMetaFileHash}. This message has a status of \texttt{ACCEPT}. The peer then starts a timeout counter to avoid waiting infinitely long for a response.
-	\item The initiating node checks on every incoming \texttt{FileExchangeRequest} whether the replica they want to distribute, as specified in \texttt{MetaFileHash} was already assigned to some other peer or whether the peer is already storing another \texttt{Replica} instance of the same \texttt{PrivateFile}. If this is not the case, it sends an acknowledgement \texttt{FileExchangeMessage} with status \texttt{FIX} and starts downloading the file specified by \texttt{ExchangeMetaFileHash} from the peer. 
+	\item The initiating node checks on every incoming \texttt{FileExchangeRequest} whether the replica they want to distribute, as specified in \texttt{MetaFileHash}, was already assigned to some other peer or whether the peer is already storing another \texttt{Replica} instance of the same \texttt{PrivateFile}. If this is not the case, it sends an acknowledgement \texttt{FileExchangeMessage} with status \texttt{FIX} and starts downloading the file specified by \texttt{ExchangeMetaFileHash} from the peer. 
 	\item On reception of the \texttt{FileExchangeMessage} with status \texttt{FIX}, the peer, in turn, starts to download the file specified by \texttt{MetaFileHash}.
 \end{enumerate}
 
@@ -180,26 +181,25 @@ type |\textcolor{mblue}{FileExchangeRequest}| struct {
 \end{listing}
 
 \noindent 
-At this point, the file exchange has been established and the variables \texttt{NodeID} and \texttt{ExchangeMFH} of the exchanged \texttt{Replica} are assigned to the corresponding peer. Both nodes then periodically request a \emph{Proof of Retrievability}.
+At this point, the file exchange has been established and the variables \texttt{NodeID} and \texttt{ExchangeMFH} of the exchanged \texttt{Replica} are assigned to the corresponding peers. Both nodes then periodically request a \emph{Proof of Retrievability}.
 \\\vspace{0.5em}
 
 \elem{Proof of Retrievability}
-\label{par:PoR}
-For the implemented PoR, a peer needs to compute a hash based on the data he has stored. To avoid precomputation, we use the \texttt{Challenge} struct that specifies the precise parameters that peer should use for the proof. The PoR the peer is supposed to solve is a SHA1 hash of chunk data (the specific chunk is defined by its metahash \texttt{ChunkHash}) and some appended data provided in \texttt{Postpend}. Both the specified chunk and the postpend data is selected (pseudo)-randomly by the requesting node. The value that the peer computes will then be stored in \texttt{Solution} and returned to the requesting node.
+For the implemented PoR, a peer needs to compute a hash based on the data he has stored. To avoid precomputation, we use the \texttt{Challenge} struct that specifies the precise parameters that peer should use for the proof. The PoR that the peer is supposed to solve is a SHA1 hash of chunk data (the specific chunk is defined by its hash \texttt{ChunkHash}) to which some data provided in \texttt{Postpend} is appended. Both the specified chunk and the postpend data is selected (pseudo)-randomly by the requesting node. The value that the peer computes will then be stored in \texttt{Solution} and returned to the requesting node.
 \\
-The PoR request, i.e. the challenge is sent out periodically. If a peer fails to provide a correct PoR for a defined number of times, the node terminates the FileExchange and thus, drops the file that it downloaded in exchange to free up the occupied storage space. 
+The PoR request, i.e. the challenge is sent out periodically. If a peer fails to provide a correct PoR for a defined number of times, the node terminates the file exchange and thus, drops the file that it downloaded in exchange to free up the occupied storage space. 
 To decrease communication overhead, the intervals in which the PoR are performed in increasing by a (pseudo-)randomized factor after every successful PoR, and reset to the initial value if the PoR is wrong or left unanswered.
 \\
-To ensure that peers cannot collude to solve the challenges, each \texttt{Replica} is encrypted using a different key.  
+Since every \texttt{Replica} is encrypted using a different key, peers cannot collude to solve challenges.   
 
 \begin{listing}
 \begin{minted}[escapeinside=||]{go}
 type |\textcolor{mblue}{Challenge}| struct {
 	Origin       string
 	Destination  string
-	MetaFileHash string
-	ChunkHash    string
-	Postpend     []byte
+	MetaFileHash string 
+	ChunkHash    string // Targeted chunk
+	Postpend     []byte // Data to be used for PoR
 	Solution     []byte // Empty for request
 	HopLimit     uint32
 }
@@ -208,16 +208,17 @@ type |\textcolor{mblue}{Challenge}| struct {
 \end{listing}
 
 \elem{Retrieving a file and state management}
-The private files stored by a node can be exported by the client and uploaded to any other node. This state contains all the required data to fetch one of the replications and therefore allows clients to retrieve the file through other nodes in case the initial uploading node is temporarily unavailable. A node can download the remote file by sending a standardized \texttt{DataRequest}, followed by an AESDecryption with the \texttt{EncryptionKey} corresponding to the replica. 
+The state of private files stored by a node can be exported by the client and uploaded to any other node. This state contains all the required data to fetch one of the replications and therefore allows clients to retrieve the file through other nodes in case the initial uploading node is temporarily unavailable. A node can download the remote file by sending a standardized \texttt{DataRequest}, followed by an AES decryption with the \texttt{EncryptionKey} corresponding to the \texttt{Replica}. 
 \\\vspace{0.5em}
 
-\elem{Private Encrypted Messaging} In addition to private, replicated files, the final project introduces asymmetric encryption to encrypt the content of private messages. 
-For this, the nodeID that was previously used is replaced by a public key that is generated during the bootstrapping process of a node. 
+\elem{Private Encrypted Messaging} In addition to private, replicated files, the final project introduces asymmetric encryption to disguise the content of private messages --- specifically, the RSA algorithm is used. 
+For this, the nodeID that was previously used is replaced by a public key that is generated during the bootstrapping process of a node. Private messages can then be encrypted using this public key and decrypted by the receiving peer using its private key.
 \\
-To allow for a public key as nodeID. The key is generated on the start of a gossiper node. Private messages can then be encrypted using this public key.
+However, third party nodes may still be eavesdropping on messages by altering the \texttt{Origin} when routing them. Therefore, a field \texttt{Signature} is added to the struct \texttt{PrivateFile}. It contains a digital signature which can be computed using the private key and the message as input. Importantly, the signature must computed on the unencrypted message content to prevent malicious nodes from computing a new valid signature after changing the \texttt{Origin} field to their own public key. 
 \\
-Sharing of a file can be done by sending the Private File state to another client using encrypted private Messages, however this is a manual process and not specifically supported by the infrastructure.
+Through these encrypted private messages, the previously implemented private files can be shared by sending a private file state to another client. Through the combination of asymmetric encryption and digital signatures this sensitive information is secured against access by other nodes. 
 
+\pagebreak
 \bibliographystyle{apalike}
 \bibliography{references}   % name your BibTeX data base
 \end{document}

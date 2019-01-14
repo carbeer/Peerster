@@ -10,13 +10,12 @@ NC='\033[0m'
 DEBUG="true"
 
 outputFiles=()
-message1=How_are_you
-message2=All_good
+message1=Hello!
+message2=How_are_you?
 
 
 file1="file1.txt"
 file2="file2.txt"
-file3="file3.txt"
 
 
 UIPort=12345
@@ -53,7 +52,7 @@ printf "${COLOR}Uploading private file with 4 replications${NC}\n"
 sleep 3
 
 printf "${COLOR}Uploading another private file with 2 replications${NC}\n"
-./client/client -UIPort=12346 -file=$file3 -private -replications=2
+./client/client -UIPort=12346 -file=$file2 -private -replications=2
 
 read varname
 printf "${COLOR}Replacing the current UI gossiper with a new instance...${NC}\n"
