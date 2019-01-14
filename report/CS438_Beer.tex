@@ -83,7 +83,7 @@ linenos
 \section*{Introduction}
 %(1 paragraph per team) Briefly describe the problem that your project is trying to solve and explain your motivation for selecting this problem, that is explain why it is an important problem to work on. 
 Our Peerster protocol allows us to exchange messages and files in a decentralized network. While we have the functionality of uploading files, the topic of \emph{privacy} has not been a big concern in this implementation since all contents in the network are accessible to everyone.
-With the presented final project, Peerster is  extended to allow for the upload of private files while preserving incentive compatibility for nodes in the network and tolerating temporary node failures without affecting file availability. Furthermore, the private messaging functionality is extended by content encryption and digital signatures to prevent eavesdropping.
+With the presented final project, Peerster is extended to allow for the upload of private files while preserving incentive compatibility for nodes in the network and tolerating temporary node failures without affecting file availability. Furthermore, the private messaging functionality is extended by content encryption and digital signatures to prevent eavesdropping.
 
 \section*{Related work}
 %(~0.5 page per team member) If other people have also tried to solve this problem (which they most probably have), what are the main approaches that they use and what are their drawbacks and limitations? Try to summarize the main idea of their approaches and describe how your approach compares to theirs. For instance, in an anonymity project, you could say systems 1, 2 and 3 use mixnets, while systems 4 and 5 use different network paths. 
@@ -137,7 +137,7 @@ As payment systems additionally complicate the implementation and, if traded on 
 
 \elem{Private file upload}
 To describe private files, we introduce a new struct \texttt{PrivateFile}. Private files are similar to the \texttt{File} struct that we have previously used. However, the result of the file indexing process will not be published for \texttt{PrivateFiles}, i.e. it is not included in the blockchain and not returned as result of search requests. 
-Besides the \texttt{File} struct that we used in previous homeworks, \texttt{Replica} are used to represent the storage of the file at another peer. Each \texttt{Replica} instance represents an AES encrypted version of the original file, each using a different \texttt{EncryptionKey}. Right after the indexing of the file, the variables \texttt{NodeID} and \texttt{ExchangeMFH} are empty as the replications are only stored locally at this point. \\\vspace{0.5em}
+Besides the \texttt{File} struct that we used in previous homeworks, \texttt{Replica} are used to represent the storage of the file at another peer. Each \texttt{Replica} instance represents an AES encrypted version of the original file, each using a different \texttt{EncryptionKey}. The encryption is done in \emph{Galois/Counter Mode (GCM)}. Right after the indexing of the file, the variables \texttt{NodeID} and \texttt{ExchangeMFH} are empty as the replications are only stored locally at this point. \\\vspace{0.5em}
 
 \begin{listing}
 \begin{minted}[escapeinside=||]{go}
@@ -211,12 +211,12 @@ type |\textcolor{mblue}{Challenge}| struct {
 The state of private files stored by a node can be exported by the client and uploaded to any other node. This state contains all the required data to fetch one of the replications and therefore allows clients to retrieve the file through other nodes in case the initial uploading node is temporarily unavailable. A node can download the remote file by sending a standardized \texttt{DataRequest}, followed by an AES decryption with the \texttt{EncryptionKey} corresponding to the \texttt{Replica}. 
 \\\vspace{0.5em}
 
-\elem{Private Encrypted Messaging} In addition to private, replicated files, the final project introduces asymmetric encryption to disguise the content of private messages --- specifically, the RSA algorithm is used. 
+\elem{Private Encrypted Messaging} In addition to private, replicated files, the final project introduces asymmetric encryption to disguise the content of private messages --- specifically, the RSA algorithm in the Optimal Asymmetric Encryption Padding (OAEP) mode is used. 
 For this, the nodeID that was previously used is replaced by a public key that is generated during the bootstrapping process of a node. Private messages can then be encrypted using this public key and decrypted by the receiving peer using its private key.
 \\
-However, third party nodes may still be eavesdropping on messages by altering the \texttt{Origin} when routing them. Therefore, a field \texttt{Signature} is added to the struct \texttt{PrivateFile}. It contains a digital signature which can be computed using the private key and the message as input. Importantly, the signature must computed on the unencrypted message content to prevent malicious nodes from computing a new valid signature after changing the \texttt{Origin} field to their own public key. 
+However, third party nodes may still be eavesdropping on private messages \emph{exchanges} (i.e. if the recipient answers to a private message) by altering the \texttt{Origin} when routing them. Therefore, a field \texttt{Signature} is added to the struct \texttt{PrivateFile}. It contains a digital signature which can be computed using the private key and the message as input for the RSA Public-Key Cryptography Standards (PKCS) 1 signature implementation. Importantly, the signature must computed on the unencrypted message content to prevent malicious nodes from computing a new valid signature after changing the \texttt{Origin} field to their own public key. 
 \\
-Through these encrypted private messages, the previously implemented private files can be shared by sending a private file state to another client. Through the combination of asymmetric encryption and digital signatures this sensitive information is secured against access by other nodes. 
+Through these encrypted private messages, the previously implemented private files can be shared by sending a private file state to another client. Through the combination of asymmetric encryption and digital signatures this sensitive information is secured against access by other nodes.  
 
 \pagebreak
 \bibliographystyle{apalike}

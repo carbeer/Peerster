@@ -1,19 +1,46 @@
 # Peerster
-Decentralized Systems Engineering Project
+## An incentive compatible decentralized file storage
+Decentralized Systems Engineering Project.
 
-### Run it
+## Run it
 To run the project, you need to build the root directory as well as the client directory through `go build`
 
-Afterwards, you can start a Peerster node through `./Peerster <extra parameters>`. I added an extra flag `-runUI` to let a Peerster node serve the GUI on 8080. A client can be run similarly through `./client/client <extra parameters>`. To see a full list of the available extra parameters, use the flag `-h`.
+Afterwards, you can start a Peerster node through `./Peerster <extra parameters>`. A client can be run similarly through `./client/client <extra parameters>`. Apart from the flags specified in the homeworks, the following flags are available for the Peerster executable:
+- `-runUI`: Indicate that the Peerster node is supposed to serve the GUI on port 8080. 
 
-### Assumptions
-- We don't need to store (private) messages sent by a CLI client if they target a destination that we don't know at that point in time.
-- All peers start at the same time, as stated in the forum as there is no way of retrospectively requesting blocks. We only accept blockchains as valid, if they eventually link to the genesis block (i.e. Hash of all zeroes). Forks that are detached from the genesis block are not considered valid. 
-- We do NOT need to refuse indexing of files that are already part of the blockchain. However, we won't add them as a new transaction to the blockchain (Yes, I am aware that this kind of undermines the idea of avoiding name theft - However, nothing about that was mentioned in the assignment, there was no answer to a forum post (https://moodle.epfl.ch/mod/forum/discuss.php?d=12715) and I asked it in person during an exercise session and got that confirmed, so I hope this is aligned with your expectations. As files are indexed, they are also returned when beind queried through a SearchRequest. )
-- We can still accept SearchReplies, even if the search is already finished (by matching the threshold). In my GUI implementation you can see all available files that were found within the network (not only the ones that were found in response to the last SearchRequest).
+For the client executable:
+- `-encrypt`: Use encryption algorithm for the specified file or private message. Attention: For Private Messages, the peer node must have a valid public key as nodeID.
+- `-replications=<int>`: Specify the number of replications for a private file upload that shall be distributed among peers in the network
+- `-state=<string>`: Indicates that the specified file to be uploaded contains is a state that shall be imported
 
-### Current features
-- Peers recognize if the peer that they request a file from doesn't have the chunk available (check for empty data). In this case, the repeated tranmission of the DataRequest is stopped.
-- If a peer gets a DataRequest but doesn't know the path to the requesting peer, it will send it to the neighboring peer that transmitted the request.  
-- Broadcasting excludes the neighboring peer where a message is received from
-- Peers check whether a client messages contain any data at all before sending them out
+ To see a full list of the available parameters, use the flag `-h`.
+ All functionality can be invoked from the GUI as well.
+
+
+## Final project implementation
+The work done as part of the final project can be mainly found in the following files:
+- `asymmEncryption.go`
+- `challengeHandler.go` 
+- `keyHandling.go` 
+- `privateFileDownload.go`
+- `privateFileHandler.go`
+- `stateManagement.go`
+- `symmEncryption.go`
+
+### New user functionality
+
+#### Private Messages 
+Can now be sent using RSA content encryption and digital signatures. \
+CLI: adding the `-encrypt` flag to a regular private message.
+
+#### Private Files
+-  Can be uploaded along with a specification of the number of replications that shall be distributed. \
+CLI: adding `-private` and `-replications=<int>` to a regular file upload
+- State export (only GUI).
+- State upload. \
+CLI: Specify `-state=<string>` with the name of the state file
+- Download a private file. Automatically determines from where to retrieve the file, i.e. from the local node or from a remote peer. In the ladder case, the file can be found as encrypted version and a decreypted version which is prefixed by `decrypted_` in the download folder. \
+CLI: Set the `-encrypt` flag to a regular file download request
+
+### Demo video
+The demo video was created and can be reproduced using the `test_final_project.sh` script.
