@@ -14,3 +14,18 @@
 
 # Stored state of the gossiper
 *.json
+
+# Shared files
+*.txt
+
+# Tex files
+*.aux
+*.bbl 
+*.blg
+*.log
+*.gz
+*.pygstyle
+*.pygtex
+
+client
+Peerster
